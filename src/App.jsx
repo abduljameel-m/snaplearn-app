@@ -32,15 +32,233 @@ const SNAP_BOT_SUGGESTIONS = [
   "heavy bleeding",
   "hand fracture",
   "head injury",
+  "room fire",
   "clothes on fire",
+  "smoke inhalation",
+  "adult choking",
   "baby choking",
   "dog bite",
   "bee sting",
+  "earthquake",
+  "flood",
+  "building collapse",
+  "person not breathing",
+  "no pulse",
 ];
 
 function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
+
+
+const SNAP_BOT_EMERGENCY_ALIASES = [
+  {
+    problem: "Snake Bite",
+    aliases: [
+      "snake bite", "snakebite", "snake bited", "snake bitten", "snake attack",
+      "cobra bite", "viper bite", "poison bite", "venom bite", "fang mark",
+      "fang marks", "two puncture marks", "puncture bite", "bite mark leg",
+      "bite mark hand", "swelling after snake bite", "pambu kadi", "paambu kadi"
+    ],
+  },
+  {
+    problem: "Dog Bite",
+    aliases: [
+      "dog bite", "dog bited", "dog bitten", "dog attack", "street dog bite",
+      "animal bite dog", "rabies", "dog teeth wound", "naai kadi", "nayi bite"
+    ],
+  },
+  {
+    problem: "Bee / Wasp Sting",
+    aliases: [
+      "bee sting", "wasp sting", "insect sting", "bee bite", "wasp bite",
+      "small swelling insect", "allergic sting", "bee allergy", "insect bite swelling"
+    ],
+  },
+  {
+    problem: "Heavy Bleeding",
+    aliases: [
+      "heavy bleeding", "blood", "bleeding", "too much blood", "blood coming",
+      "cut wound", "deep cut", "open wound", "blood from hand", "blood from leg",
+      "accident bleeding", "knife cut", "glass cut", "injury blood", "wound bleeding"
+    ],
+  },
+  {
+    problem: "Hand / Leg Fracture",
+    aliases: [
+      "fracture", "bone fracture", "broken bone", "broken hand", "broken leg",
+      "hand fracture", "leg fracture", "arm fracture", "swollen hand", "swollen leg",
+      "bent hand", "bent leg", "bone pain", "cannot move hand", "cannot move leg"
+    ],
+  },
+  {
+    problem: "Head Injury",
+    aliases: [
+      "head injury", "head wound", "head bleeding", "head hit", "head accident",
+      "helmet accident", "face injury", "brain injury", "fell on head", "head trauma"
+    ],
+  },
+  {
+    problem: "Room Fire",
+    aliases: [
+      "room fire", "house fire", "building fire", "kitchen fire", "fire accident",
+      "flames", "fire in home", "fire in room", "burning room", "electric fire"
+    ],
+  },
+  {
+    problem: "Clothes on Fire",
+    aliases: [
+      "clothes on fire", "cloth fire", "dress fire", "shirt fire", "person burning",
+      "fire on body", "clothes burning", "dress burning", "human burning"
+    ],
+  },
+  {
+    problem: "Smoke Inhalation",
+    aliases: [
+      "smoke inhalation", "smoke", "smoke breathing", "gas leak", "gas suffocation",
+      "suffocation", "can't breathe smoke", "coughing smoke", "smoke in room"
+    ],
+  },
+  {
+    problem: "Adult Choking",
+    aliases: [
+      "adult choking", "choking", "food stuck", "throat blocked", "can't breathe food",
+      "person choking", "man choking", "woman choking", "food in throat", "throat stuck"
+    ],
+  },
+  {
+    problem: "Baby Choking",
+    aliases: [
+      "baby choking", "infant choking", "child choking", "newborn choking",
+      "baby food stuck", "baby can't breathe", "baby throat blocked"
+    ],
+  },
+  {
+    problem: "Earthquake",
+    aliases: [
+      "earthquake", "earth quake", "building shaking", "ground shaking", "tremor",
+      "wall cracking", "quake", "disaster shaking"
+    ],
+  },
+  {
+    problem: "Flood",
+    aliases: [
+      "flood", "flood water", "rain flood", "water logging", "water entered home",
+      "trapped in water", "drowning flood", "heavy rain water", "street flood"
+    ],
+  },
+  {
+    problem: "Building Collapse",
+    aliases: [
+      "building collapse", "collapsed building", "house collapse", "wall fall",
+      "debris", "rubble", "person trapped", "building fell", "structure collapse",
+      "catastrophic failure", "disaster collapse"
+    ],
+  },
+  {
+    problem: "Person Not Breathing",
+    aliases: [
+      "not breathing", "no breathing", "person not breathing", "unconscious not breathing",
+      "breath stopped", "can't breathe", "stopped breathing", "breathing stopped"
+    ],
+  },
+  {
+    problem: "No Pulse",
+    aliases: [
+      "no pulse", "no heartbeat", "heart stopped", "cardiac arrest", "heart attack",
+      "no heart beat", "pulse missing", "not responding no pulse"
+    ],
+  },
+];
+
+function levenshteinDistance(a, b) {
+  const textA = normalizeText(a);
+  const textB = normalizeText(b);
+
+  if (!textA) return textB.length;
+  if (!textB) return textA.length;
+
+  const dp = Array.from({ length: textA.length + 1 }, () =>
+    Array(textB.length + 1).fill(0)
+  );
+
+  for (let i = 0; i <= textA.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= textB.length; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= textA.length; i++) {
+    for (let j = 1; j <= textB.length; j++) {
+      const cost = textA[i - 1] === textB[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return dp[textA.length][textB.length];
+}
+
+function aliasMatchScore(userText, alias) {
+  const normalizedUser = normalizeText(userText);
+  const normalizedAlias = normalizeText(alias);
+
+  if (!normalizedUser || !normalizedAlias) return 0;
+
+  if (normalizedUser === normalizedAlias) return 100;
+  if (normalizedUser.includes(normalizedAlias)) return 92;
+  if (normalizedAlias.includes(normalizedUser) && normalizedUser.length >= 4) return 84;
+
+  const userWords = normalizedUser.split(" ").filter((word) => word.length > 2);
+  const aliasWords = normalizedAlias.split(" ").filter((word) => word.length > 2);
+
+  let score = 0;
+
+  for (let userWord of userWords) {
+    for (let aliasWord of aliasWords) {
+      if (userWord === aliasWord) score += 18;
+      else if (userWord.includes(aliasWord) || aliasWord.includes(userWord)) score += 10;
+      else if (Math.min(userWord.length, aliasWord.length) >= 4 && levenshteinDistance(userWord, aliasWord) <= 1) score += 8;
+    }
+  }
+
+  return Math.min(score, 82);
+}
+
+function findBestEmergencyMatch(inputText) {
+  const userText = normalizeText(inputText);
+
+  if (!userText) return null;
+
+  let best = null;
+
+  for (let rule of SNAP_BOT_EMERGENCY_ALIASES) {
+    for (let alias of rule.aliases) {
+      const score = aliasMatchScore(userText, alias);
+
+      if (!best || score > best.score) {
+        best = {
+          problemTitle: rule.problem,
+          matchedAlias: alias,
+          score,
+        };
+      }
+    }
+  }
+
+  if (!best || best.score < 18) return null;
+
+  const matched = getProblemByTitle(best.problemTitle);
+
+  if (!matched) return null;
+
+  return {
+    ...matched,
+    score: best.score,
+    matchedAlias: best.matchedAlias,
+  };
+}
+
 
 
 /* =====================================================
@@ -817,87 +1035,36 @@ function App() {
       ${aiData?.keywords || ""}
     `);
 
-    // Strong safety overrides first
-    const emergencyRules = [
-      {
-        words: ["snake", "snakebite", "snake bite", "cobra", "viper", "venom", "fang", "fangs", "puncture", "two red", "bite mark"],
-        problem: "Snake Bite",
-      },
-      {
-        words: ["dog", "rabies", "dog bite"],
-        problem: "Dog Bite",
-      },
-      {
-        words: ["bee", "wasp", "sting", "insect sting"],
-        problem: "Bee / Wasp Sting",
-      },
-      {
-        words: ["bleeding", "blood", "wound", "cut", "gash", "deep wound", "open wound"],
-        problem: "Heavy Bleeding",
-      },
-      {
-        words: ["fracture", "broken", "broken bone", "broken arm", "broken leg", "swelling bone", "bent hand", "bent leg"],
-        problem: "Hand / Leg Fracture",
-      },
-      {
-        words: ["head injury", "head wound", "helmet", "brain"],
-        problem: "Head Injury",
-      },
-      {
-        words: ["fire", "flame", "burning room", "room fire"],
-        problem: "Room Fire",
-      },
-      {
-        words: ["clothes fire", "cloth fire", "dress fire", "clothes burning"],
-        problem: "Clothes on Fire",
-      },
-      {
-        words: ["smoke", "suffocation", "gas"],
-        problem: "Smoke Inhalation",
-      },
-      {
-        words: ["choking", "throat", "food stuck"],
-        problem: "Adult Choking",
-      },
-      {
-        words: ["baby choking", "infant choking"],
-        problem: "Baby Choking",
-      },
-      {
-        words: ["earthquake"],
-        problem: "Earthquake",
-      },
-      {
-        words: ["flood", "flood water"],
-        problem: "Flood",
-      },
-      {
-        words: ["building collapse", "collapsed building", "debris"],
-        problem: "Building Collapse",
-      },
-    ];
+    const aliasMatch = findBestEmergencyMatch(aiText);
 
-    for (let rule of emergencyRules) {
-      if (rule.words.some((word) => aiText.includes(word))) {
-        return getProblemByTitle(rule.problem);
-      }
-    }
+    if (aliasMatch) return aliasMatch;
 
-    // Exact AI problem title match
     const exact = getProblemByTitle(aiData?.problem);
     if (exact) return exact;
 
-    // Safer fuzzy match against problem title + keywords only
+    let bestMatch = null;
+    let bestScore = 0;
+
     for (let emergency of EMERGENCIES) {
       for (let problem of emergency.problems) {
-        const problemText = normalizeText(`${problem.title} ${problem.keywords}`);
-        if (problemText && aiText && (aiText.includes(problemText) || problemText.includes(aiText))) {
-          return { emergency, problem };
+        const searchText = normalizeText(`
+          ${emergency.name}
+          ${problem.title}
+          ${problem.keywords}
+          ${problem.steps.map((step) => step.text).join(" ")}
+        `);
+
+        const inputWords = aiText.split(" ").filter((word) => word.length > 2);
+        const score = inputWords.filter((word) => searchText.includes(word)).length;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = { emergency, problem, score };
         }
       }
     }
 
-    return null;
+    return bestMatch && bestScore >= 1 ? bestMatch : null;
   }
 
   function handleImageChange(event) {
@@ -925,7 +1092,7 @@ function App() {
         const base64 = reader.result.split(",")[1];
 
         setLoadingAI(true);
-        setBotMessage("Analyzing image... Please wait 5–15 seconds.");
+        setBotMessage("🔍 Analyzing image and matching it with SnapLearn emergency guidance...");
 
         const response = await fetch("/api/analyze-image", {
           method: "POST",
@@ -981,40 +1148,29 @@ function App() {
     const userText = normalizeText(inputValue);
 
     if (userText === "") {
-      setBotMessage("⚠️ Please type your emergency problem. Example: snake bite, bleeding, fire, choking.");
+      setBotMessage(
+        "⚠️ Please type what happened. Example: snake bite, bleeding, earthquake, flood, building collapse, fire, choking."
+      );
       return;
     }
 
-    setBotMessage("🔍 Finding the best guidance...");
+    setBotError("");
+    setBotMessage("🔍 Understanding the situation and finding guidance...");
 
-    const quickRules = [
-      { words: ["snake", "snakebite", "cobra", "viper", "venom", "fang"], problem: "Snake Bite" },
-      { words: ["dog", "rabies"], problem: "Dog Bite" },
-      { words: ["bee", "wasp", "sting", "insect"], problem: "Bee / Wasp Sting" },
-      { words: ["blood", "bleeding", "wound", "cut", "gash"], problem: "Heavy Bleeding" },
-      { words: ["fracture", "broken", "bone", "bent hand", "bent leg"], problem: "Hand / Leg Fracture" },
-      { words: ["head", "helmet", "brain"], problem: "Head Injury" },
-      { words: ["cloth fire", "clothes fire", "dress fire", "burning clothes"], problem: "Clothes on Fire" },
-      { words: ["fire", "flame", "kitchen fire", "room fire"], problem: "Room Fire" },
-      { words: ["smoke", "gas", "suffocation"], problem: "Smoke Inhalation" },
-      { words: ["baby choking", "infant choking"], problem: "Baby Choking" },
-      { words: ["choking", "throat", "food stuck"], problem: "Adult Choking" },
-      { words: ["earthquake"], problem: "Earthquake" },
-      { words: ["flood", "water"], problem: "Flood" },
-      { words: ["collapse", "debris", "building fall"], problem: "Building Collapse" },
-      { words: ["not breathing", "no breathing", "unconscious"], problem: "Person Not Breathing" },
-      { words: ["no pulse", "heartbeat", "cardiac"], problem: "No Pulse" },
-    ];
+    const bestAliasMatch = findBestEmergencyMatch(userText);
 
-    for (let rule of quickRules) {
-      if (rule.words.some((word) => userText.includes(normalizeText(word)))) {
-        const match = getProblemByTitle(rule.problem);
-        if (match) {
-          openGuidance(match.emergency, match.problem, `✅ Quick match: ${match.problem.title}`);
-          setBotInput("");
-          return;
-        }
-      }
+    if (bestAliasMatch) {
+      const confidence =
+        bestAliasMatch.score >= 80 ? "high" :
+        bestAliasMatch.score >= 40 ? "medium" : "low";
+
+      openGuidance(
+        bestAliasMatch.emergency,
+        bestAliasMatch.problem,
+        `✅ Guidance opened: ${bestAliasMatch.problem.title}\nConfidence: ${confidence}\nMatched clue: "${bestAliasMatch.matchedAlias}"`
+      );
+      setBotInput("");
+      return;
     }
 
     const fakeAiData = {
@@ -1031,44 +1187,54 @@ function App() {
       openGuidance(
         smartMatch.emergency,
         smartMatch.problem,
-        `✅ Found guidance for: ${smartMatch.problem.title}`
+        `✅ Closest guidance opened: ${smartMatch.problem.title}`
       );
       setBotInput("");
       return;
     }
 
-    let bestMatch = null;
-    let bestScore = 0;
-
-    for (let emergency of EMERGENCIES) {
-      for (let problem of emergency.problems) {
-        const searchText = normalizeText(`
+    const allProblems = EMERGENCIES.flatMap((emergency) =>
+      emergency.problems.map((problem) => ({
+        emergency,
+        problem,
+        text: normalizeText(`
           ${emergency.name}
           ${problem.title}
           ${problem.keywords}
           ${problem.steps.map((step) => step.text).join(" ")}
-        `);
+        `),
+      }))
+    );
 
-        const userWords = userText.split(" ").filter((word) => word.length > 2);
-        const score = userWords.filter((word) => searchText.includes(word)).length;
+    const userWords = userText.split(" ").filter((word) => word.length > 2);
 
-        if (score > bestScore) {
-          bestScore = score;
-          bestMatch = { emergency, problem };
-        }
-      }
-    }
+    const ranked = allProblems
+      .map((item) => {
+        const score = userWords.reduce((total, word) => {
+          if (item.text.includes(word)) return total + 1;
+          return total;
+        }, 0);
 
-    if (bestMatch && bestScore >= 1) {
+        return { ...item, score };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    if (ranked.length > 0) {
+      const top = ranked[0];
       openGuidance(
-        bestMatch.emergency,
-        bestMatch.problem,
-        `✅ Closest guidance: ${bestMatch.problem.title}`
+        top.emergency,
+        top.problem,
+        `✅ I found the closest guidance: ${top.problem.title}\nOther possible matches: ${ranked.map((item) => item.problem.title).join(", ")}`
       );
       setBotInput("");
-    } else {
-      setBotMessage("❌ I could not clearly understand. Try simple words like: snake bite, bleeding, fracture, fire, choking, dog bite.");
+      return;
     }
+
+    setBotMessage(
+      "❌ I could not safely identify it.\nTry typing simpler words like:\n• earthquake\n• flood\n• building collapse\n• room fire\n• smoke inhalation\n• snake bite\n• heavy bleeding\n• fracture\n• baby choking\n• no pulse"
+    );
   }
 
   function safeAskSnapBot(inputValue = botInput) {
@@ -1163,7 +1329,7 @@ function App() {
 
           <input
             type="text"
-            placeholder="Example: snake bite, blood from hand, baby choking"
+            placeholder="Example: earthquake, flood, building collapse, bleeding, snake bite"
             value={botInput}
             onChange={(e) => setBotInput(e.target.value)}
             onKeyDown={(e) => {

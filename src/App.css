@@ -1985,3 +1985,556 @@ select:focus-visible {
   }
 }
 
+
+
+/* =====================================================
+   SNAPLEARN HACKATHON UI PRO UPGRADE
+   Add-on layer for a more attractive, stable, judge-friendly UI.
+   Keep this at the very bottom of App.css.
+===================================================== */
+
+:root {
+  --pro-blue: #2563eb;
+  --pro-cyan: #06b6d4;
+  --pro-teal: #0f766e;
+  --pro-purple: #7c3aed;
+  --pro-red: #dc2626;
+  --pro-orange: #f97316;
+  --pro-ink: #0f172a;
+  --pro-muted: #64748b;
+  --pro-card: rgba(255, 255, 255, 0.9);
+  --pro-border: rgba(148, 163, 184, 0.28);
+}
+
+/* overall premium background */
+body {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(37, 99, 235, 0.22), transparent 28%),
+    radial-gradient(circle at 90% 8%, rgba(124, 58, 237, 0.18), transparent 30%),
+    radial-gradient(circle at 78% 88%, rgba(6, 182, 212, 0.14), transparent 30%),
+    linear-gradient(135deg, #eef2ff, #f8fafc 42%, #ecfeff);
+  background-attachment: fixed;
+}
+
+/* smooth app entrance */
+.app {
+  animation: appFadeIn 0.35s ease;
+}
+
+@keyframes appFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* premium hero with animated glow */
+.hero {
+  isolation: isolate;
+  background:
+    linear-gradient(135deg, rgba(2, 6, 23, 0.96), rgba(29, 78, 216, 0.94), rgba(15, 118, 110, 0.94)),
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.24), transparent 30%);
+}
+
+.hero::before {
+  animation: floatIcon 4s ease-in-out infinite;
+}
+
+.hero::after {
+  animation: floatIcon 5s ease-in-out infinite reverse;
+}
+
+.hero::selection,
+.hero *::selection {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+@keyframes floatIcon {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(3deg);
+  }
+}
+
+.hero h1 {
+  background: linear-gradient(90deg, #ffffff, #dbeafe, #ccfbf1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero p {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* search box improvement */
+.searchBox input {
+  min-height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow: 0 18px 35px rgba(2, 6, 23, 0.20);
+}
+
+.searchBox input::placeholder {
+  color: #64748b;
+}
+
+.searchBox input:focus {
+  transform: translateY(-1px);
+}
+
+/* universal premium button shine */
+.heroActions button,
+.heroQuickActions button,
+.settingsFab,
+.snapBotButton,
+.floatingSOS button,
+.snapBotAsk,
+.snapBotAnalyze,
+.voice,
+.back,
+.settingsActions button,
+.panicActions button,
+.exitPanicBtn {
+  position: relative;
+  overflow: hidden;
+}
+
+.heroActions button::before,
+.heroQuickActions button::before,
+.settingsFab::before,
+.snapBotButton::before,
+.floatingSOS button::before,
+.snapBotAsk::before,
+.snapBotAnalyze::before,
+.voice::before,
+.back::before,
+.settingsActions button::before,
+.panicActions button::before,
+.exitPanicBtn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  transition: transform 0.55s ease;
+}
+
+.heroActions button:hover::before,
+.heroQuickActions button:hover::before,
+.settingsFab:hover::before,
+.snapBotButton:hover::before,
+.floatingSOS button:hover::before,
+.snapBotAsk:hover::before,
+.snapBotAnalyze:hover::before,
+.voice:hover::before,
+.back:hover::before,
+.settingsActions button:hover::before,
+.panicActions button:hover::before,
+.exitPanicBtn:hover::before {
+  transform: translateX(120%);
+}
+
+/* emergency cards with category accent */
+.cards {
+  align-items: stretch;
+}
+
+.card {
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+}
+
+.card:nth-child(1)::before {
+  background: rgba(239, 68, 68, 0.10);
+}
+
+.card:nth-child(2)::before {
+  background: rgba(249, 115, 22, 0.12);
+}
+
+.card:nth-child(3)::before {
+  background: rgba(37, 99, 235, 0.10);
+}
+
+.card:nth-child(4)::before {
+  background: rgba(124, 58, 237, 0.10);
+}
+
+.card:nth-child(5)::before {
+  background: rgba(15, 118, 110, 0.12);
+}
+
+.card:nth-child(6)::before {
+  background: rgba(6, 182, 212, 0.12);
+}
+
+.card:hover {
+  border-color: rgba(37, 99, 235, 0.38);
+}
+
+/* details page polish */
+.details {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  animation: slideInDetails 0.25s ease;
+}
+
+@keyframes slideInDetails {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.visualStep {
+  position: relative;
+}
+
+.visualStep::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 4px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--pro-blue), var(--pro-teal));
+  opacity: 0.8;
+}
+
+.cartoon {
+  box-shadow:
+    inset 0 0 0 1px rgba(37, 99, 235, 0.12),
+    0 12px 24px rgba(37, 99, 235, 0.10);
+}
+
+/* SnapBot pro look */
+.snapBotBox {
+  backdrop-filter: blur(18px);
+  animation: botPop 0.22s ease;
+}
+
+@keyframes botPop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.snapBotHeader {
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.snapBotHeader h3::after {
+  content: "  • ready";
+  font-size: 12px;
+  color: #16a34a;
+  font-weight: 900;
+}
+
+.snapBotText {
+  margin-top: 12px;
+}
+
+.snapBotBox input {
+  min-height: 46px;
+}
+
+.suggestionChips button {
+  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.10);
+}
+
+.suggestionChips button:nth-child(5),
+.suggestionChips button:nth-child(6),
+.suggestionChips button:nth-child(7) {
+  background: linear-gradient(135deg, #fef3c7, #ffedd5);
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+
+.suggestionChips button:nth-child(12),
+.suggestionChips button:nth-child(13),
+.suggestionChips button:nth-child(14) {
+  background: linear-gradient(135deg, #ede9fe, #e0f2fe);
+  color: #5b21b6;
+  border-color: #c4b5fd;
+}
+
+.snapBotHint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.snapBotPreview {
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.13);
+}
+
+.aiResultCard strong {
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.botLoader {
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
+}
+
+/* special bot result text */
+.snapBotMessage {
+  font-weight: 750;
+}
+
+.snapBotMessage::first-line {
+  color: var(--pro-blue);
+}
+
+/* panic mode more dramatic but clean */
+.showPanic {
+  backdrop-filter: blur(16px);
+}
+
+.showPanic::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent, rgba(255,255,255,0.18));
+  pointer-events: none;
+}
+
+.showPanic h2 {
+  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.panicActions button {
+  color: #7f1d1d;
+}
+
+.panicActions button:nth-child(1) {
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.panicActions button:nth-child(2) {
+  border: 1px solid rgba(249, 115, 22, 0.24);
+}
+
+.panicActions button:nth-child(3) {
+  border: 1px solid rgba(124, 58, 237, 0.24);
+}
+
+/* settings form polish */
+.settingsPanel {
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+.settingsGrid input,
+.settingsGrid textarea {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.settingsGrid input:hover,
+.settingsGrid textarea:hover,
+.snapBotBox input:hover {
+  background: #ffffff;
+  border-color: #93c5fd;
+}
+
+.emergencyCardPreview {
+  position: relative;
+  overflow: hidden;
+}
+
+.emergencyCardPreview::after {
+  content: "Emergency ID";
+  position: absolute;
+  right: -18px;
+  top: 14px;
+  transform: rotate(20deg);
+  font-size: 12px;
+  font-weight: 950;
+  color: rgba(37, 99, 235, 0.16);
+  letter-spacing: 0.08em;
+}
+
+/* language and theme controls */
+.languageBox,
+.themeToggle {
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.languageBox select {
+  max-width: 110px;
+}
+
+/* better mobile bottom layout */
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
+  }
+
+  .hero {
+    margin-bottom: 16px;
+  }
+
+  .hero h1 {
+    letter-spacing: -0.5px;
+  }
+
+  .hero p {
+    font-size: 14px;
+  }
+
+  .searchBox input {
+    min-height: 48px;
+  }
+
+  .cards {
+    gap: 14px;
+  }
+
+  .card {
+    border-radius: 22px;
+  }
+
+  .card::after {
+    margin-top: 12px;
+  }
+
+  .visualStep::before {
+    top: 12px;
+    bottom: 12px;
+  }
+
+  .snapBotHeader h3 {
+    font-size: 20px;
+  }
+
+  .snapBotText,
+  .snapBotHint,
+  .snapBotMessage,
+  .aiResultCard {
+    font-size: 13px;
+  }
+
+  .suggestionChips button {
+    min-height: 38px;
+  }
+
+  .showPanic {
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+
+  .topActionButtons {
+    box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.08);
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    padding-inline: 10px;
+  }
+
+  .hero {
+    padding: 36px 14px 30px;
+  }
+
+  .hero h1 {
+    font-size: 30px;
+  }
+
+  .heroBadge {
+    font-size: 12px;
+  }
+
+  .card {
+    padding: 18px 16px;
+  }
+
+  .icon {
+    font-size: 40px;
+  }
+
+  .details {
+    padding: 16px;
+  }
+
+  .cartoon {
+    width: 70px;
+    height: 70px;
+    min-width: 70px;
+    font-size: 30px;
+  }
+
+  .snapBotBox {
+    bottom: 128px;
+    max-height: 68vh;
+  }
+
+  .settingsFab,
+  .snapBotButton {
+    font-size: 11px;
+  }
+}
+
+/* polish scrollbars where supported */
+.snapBotBox::-webkit-scrollbar,
+.settingsPanel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.snapBotBox::-webkit-scrollbar-thumb,
+.settingsPanel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.dark .snapBotBox::-webkit-scrollbar-thumb,
+.dark .settingsPanel::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+/* dark theme extra contrast */
+.dark .snapBotHint {
+  background: #020617;
+  border-color: #334155;
+}
+
+.dark .settingsGrid input:hover,
+.dark .settingsGrid textarea:hover,
+.dark .snapBotBox input:hover {
+  background: #0f172a;
+  border-color: #60a5fa;
+}
+
+.dark .emergencyCardPreview::after {
+  color: rgba(255,255,255,0.08);
+}
+
+.dark .suggestionChips button:nth-child(5),
+.dark .suggestionChips button:nth-child(6),
+.dark .suggestionChips button:nth-child(7),
+.dark .suggestionChips button:nth-child(12),
+.dark .suggestionChips button:nth-child(13),
+.dark .suggestionChips button:nth-child(14) {
+  background: #0f172a;
+  color: #bfdbfe;
+  border-color: #334155;
+}
+

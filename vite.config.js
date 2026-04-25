@@ -9,6 +9,10 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
 
+      devOptions: {
+        enabled: false, // IMPORTANT FIX
+      },
+
       manifest: {
         name: "SnapLearn Emergency App",
         short_name: "SnapLearn",

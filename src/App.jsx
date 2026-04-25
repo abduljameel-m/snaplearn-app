@@ -499,6 +499,28 @@ function App() {
   const [imagePreview, setImagePreview] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [locationError, setLocationError] = useState("");
+  const [manualLocation, setManualLocation] = useState(() => localStorage.getItem("snaplearnManualLocation") || "");
+  const [emergencyProfile, setEmergencyProfile] = useState(() => {
+    const savedProfile = localStorage.getItem("snaplearnEmergencyProfile");
+
+    if (savedProfile) {
+      try {
+        return JSON.parse(savedProfile);
+      } catch {
+        return null;
+      }
+    }
+
+    return {
+      name: "",
+      emergencyContactName: "",
+      emergencyContactNumber: "",
+      bloodGroup: "",
+      medicalNotes: "",
+    };
+  });
 
   function ui(key) {
     return UI_TEXT[key]?.[language] || UI_TEXT[key]?.English || key;
@@ -506,6 +528,65 @@ function App() {
 
   function getCacheKey(text, lang = language) {
     return `${lang}::${text}`;
+  }
+
+  useEffect(() => {
+    localStorage.setItem("snaplearnEmergencyProfile", JSON.stringify(emergencyProfile));
+  }, [emergencyProfile]);
+
+  useEffect(() => {
+    localStorage.setItem("snaplearnManualLocation", manualLocation);
+  }, [manualLocation]);
+
+  function updateProfile(field, value) {
+    setEmergencyProfile((previousProfile) => ({
+      ...previousProfile,
+      [field]: value,
+    }));
+  }
+
+  function buildEmergencyMessage() {
+    const profileLines = [];
+
+    if (emergencyProfile.name) profileLines.push(`Name: ${emergencyProfile.name}`);
+    if (emergencyProfile.emergencyContactName) profileLines.push(`Emergency Contact: ${emergencyProfile.emergencyContactName}`);
+    if (emergencyProfile.emergencyContactNumber) profileLines.push(`Contact Number: ${emergencyProfile.emergencyContactNumber}`);
+    if (emergencyProfile.bloodGroup) profileLines.push(`Blood Group: ${emergencyProfile.bloodGroup}`);
+    if (emergencyProfile.medicalNotes) profileLines.push(`Medical Notes: ${emergencyProfile.medicalNotes}`);
+
+    const locationLine = locationText?.includes("google.com/maps")
+      ? `Live Location: ${locationText}`
+      : manualLocation
+        ? `Saved Location: ${manualLocation}`
+        : "Location: Not available";
+
+    return `Emergency! I need help.\n${profileLines.join("\n")}\n${locationLine}`;
+  }
+
+  function shareEmergencyCard() {
+    const message = buildEmergencyMessage();
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+  }
+
+  function callSavedContact() {
+    if (!emergencyProfile.emergencyContactNumber) {
+      alert("Please add emergency contact number in settings first.");
+      setSettingsOpen(true);
+      return;
+    }
+
+    callNumber(emergencyProfile.emergencyContactNumber);
+  }
+
+  function useSavedLocation() {
+    if (!manualLocation.trim()) {
+      setLocationError("Please save your address/location in Emergency ID settings first.");
+      setSettingsOpen(true);
+      return;
+    }
+
+    setLocationText(`Saved location: ${manualLocation}`);
+    setLocationError("");
   }
 
   async function translateOnline(text, targetLanguage = language) {
@@ -574,8 +655,11 @@ function App() {
   }
 
   function getLocation() {
+    setLocationError("");
+
     if (!navigator.geolocation) {
-      setLocationText("Location is not supported on this device.");
+      setLocationError("Location is not supported on this device. Use saved manual location instead.");
+      useSavedLocation();
       return;
     }
 
@@ -586,22 +670,40 @@ function App() {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
         setLocationText(`https://www.google.com/maps?q=${lat},${lon}`);
+        setLocationError("");
       },
       (error) => {
-        if (error.code === 1) setLocationText("Permission denied. Please allow location access.");
-        else if (error.code === 2) setLocationText("Location unavailable. Please try again.");
-        else setLocationText("Unable to get location. Please try again.");
+        if (error.code === 1) {
+          setLocationError("Location permission denied. Open browser site settings and allow Location, or use your saved manual location.");
+        } else if (error.code === 2) {
+          setLocationError("Location unavailable. Check GPS/mobile data or use saved manual location.");
+        } else {
+          setLocationError("Location request timed out. Try again or use saved manual location.");
+        }
+
+        if (manualLocation.trim()) {
+          setLocationText(`Saved location: ${manualLocation}`);
+        } else {
+          setLocationText("");
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 60000,
       }
     );
   }
 
   function shareLocation() {
-    if (!locationText || !locationText.includes("google.com/maps")) {
-      alert(ui("Please get location first."));
+    const message = buildEmergencyMessage();
+
+    if (!locationText && !manualLocation.trim()) {
+      alert("Please get live location or save a manual location first.");
+      setSettingsOpen(true);
       return;
     }
 
-    const message = `Emergency! I need help. My location: ${locationText}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   }
 
@@ -629,7 +731,16 @@ function App() {
   }
 
   function emergencyMatches(emergency, keyword) {
-    return (
+    const snapBotSuggestions = [
+    "snake bite",
+    "heavy bleeding",
+    "hand fracture",
+    "head injury",
+    "clothes on fire",
+    "baby choking",
+  ];
+
+  return (
       emergency.name.toLowerCase().includes(keyword) ||
       emergency.problems.some((problem) => problemMatches(problem, keyword))
     );
@@ -687,7 +798,7 @@ function App() {
     // Strong safety overrides first
     const emergencyRules = [
       {
-        words: ["snake", "cobra", "viper", "venom", "fang", "fangs"],
+        words: ["snake", "snakebite", "snake bite", "cobra", "viper", "venom", "fang", "fangs", "puncture", "two red", "bite mark"],
         problem: "Snake Bite",
       },
       {
@@ -699,11 +810,11 @@ function App() {
         problem: "Bee / Wasp Sting",
       },
       {
-        words: ["bleeding", "blood", "wound", "cut", "gash"],
+        words: ["bleeding", "blood", "wound", "cut", "gash", "deep wound", "open wound"],
         problem: "Heavy Bleeding",
       },
       {
-        words: ["fracture", "broken bone", "broken arm", "broken leg", "swelling bone"],
+        words: ["fracture", "broken", "broken bone", "broken arm", "broken leg", "swelling bone", "bent hand", "bent leg"],
         problem: "Hand / Leg Fracture",
       },
       {
@@ -792,7 +903,7 @@ function App() {
         const base64 = reader.result.split(",")[1];
 
         setLoadingAI(true);
-        setBotMessage("Analyzing image...");
+        setBotMessage("Analyzing image... Please wait 5–15 seconds.");
 
         const response = await fetch("/api/analyze-image", {
           method: "POST",
@@ -812,7 +923,7 @@ function App() {
         setAiResult(data);
 
         if (!response.ok) {
-          setBotMessage(data?.error || "AI image analysis failed.");
+          setBotMessage(data?.error || "AI image analysis failed. Try typing the problem instead.");
           return;
         }
 
@@ -844,8 +955,8 @@ function App() {
   const totalSteps = EMERGENCIES.reduce((total, emergency) => {
     return total + emergency.problems.reduce((problemTotal, problem) => problemTotal + problem.steps.length, 0);
   }, 0);
-  function askSnapBot() {
-    const userText = normalizeText(botInput);
+  function askSnapBot(inputValue = botInput) {
+    const userText = normalizeText(inputValue);
 
     if (userText === "") {
       setBotMessage("Please type your emergency problem.");
@@ -911,68 +1022,74 @@ function App() {
 
   return (
     <div className={darkMode ? "app dark" : "app"}>
-      <div className="snapBotButton" onClick={() => setBotOpen(true)}>
-  🤖 SnapBot
-</div>
+      <div className="topActionButtons">
+        <button className="settingsFab" onClick={() => setSettingsOpen(true)}>
+          ⚙️ Emergency ID
+        </button>
 
-{botOpen && (
-  <div className="snapBotBox">
-    <div className="snapBotHeader">
-      <h3>🤖 SnapBot</h3>
-      <button onClick={() => setBotOpen(false)}>×</button>
-    </div>
+        <button className="snapBotButton" onClick={() => setBotOpen(true)}>
+          🤖 SnapBot
+        </button>
+      </div>
 
-    <p className="snapBotText">
-      Tell me your emergency. Example: snake bite, hand injury, bleeding, fire.
-    </p>
+      {settingsOpen && (
+        <div className="modalOverlay">
+          <div className="settingsPanel">
+            <div className="settingsHeader">
+              <div>
+                <span className="tinyLabel">Emergency Settings</span>
+                <h2>🛡️ Emergency ID Card</h2>
+              </div>
+              <button onClick={() => setSettingsOpen(false)}>×</button>
+            </div>
 
-    <input
-      type="text"
-      placeholder="Type your problem..."
-      value={botInput}
-      onChange={(e) => setBotInput(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          askSnapBot();
-        }
-      }}
-    />
+            <p className="settingsNote">
+              Save important details once. During panic mode you can quickly share your emergency contact, medical note and saved location.
+            </p>
 
-    <label className="photoUploadLabel">
-      📸 Upload / Capture Emergency Photo
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleImageChange}
-      />
-    </label>
+            <div className="settingsGrid">
+              <label>Your Name<input value={emergencyProfile.name} onChange={(e) => updateProfile("name", e.target.value)} placeholder="Example: Abdul Jameel" /></label>
+              <label>Emergency Contact Name<input value={emergencyProfile.emergencyContactName} onChange={(e) => updateProfile("emergencyContactName", e.target.value)} placeholder="Example: Father / Friend" /></label>
+              <label>Emergency Contact Number<input value={emergencyProfile.emergencyContactNumber} onChange={(e) => updateProfile("emergencyContactNumber", e.target.value)} placeholder="Example: 9876543210" /></label>
+              <label>Blood Group<input value={emergencyProfile.bloodGroup} onChange={(e) => updateProfile("bloodGroup", e.target.value)} placeholder="Example: B+" /></label>
+              <label className="fullWidth">Saved Address / Common Location<textarea value={manualLocation} onChange={(e) => setManualLocation(e.target.value)} placeholder="Example: Rajalakshmi Engineering College, Chennai" /></label>
+              <label className="fullWidth">Medical Notes<textarea value={emergencyProfile.medicalNotes} onChange={(e) => updateProfile("medicalNotes", e.target.value)} placeholder="Example: No known allergies / diabetic / asthma" /></label>
+            </div>
 
-    {imagePreview && (
-      <img
-        className="snapBotPreview"
-        src={imagePreview}
-        alt="Emergency preview"
-      />
-    )}
+            <div className="emergencyCardPreview">
+              <h3>🚑 Quick Emergency Card</h3>
+              <p><b>Name:</b> {emergencyProfile.name || "Not added"}</p>
+              <p><b>Contact:</b> {emergencyProfile.emergencyContactName || "Not added"} {emergencyProfile.emergencyContactNumber ? `(${emergencyProfile.emergencyContactNumber})` : ""}</p>
+              <p><b>Blood:</b> {emergencyProfile.bloodGroup || "Not added"}</p>
+              <p><b>Location:</b> {manualLocation || "Not added"}</p>
+            </div>
 
-    <button className="snapBotAsk" onClick={askSnapBot}>
-      Find Guidance
-    </button>
+            <div className="settingsActions">
+              <button onClick={callSavedContact}>📞 Call Contact</button>
+              <button onClick={shareEmergencyCard}>📤 Share Emergency Card</button>
+              <button onClick={() => setSettingsOpen(false)}>✅ Done</button>
+            </div>
 
-    <button className="snapBotAnalyze" onClick={analyzeImage} disabled={loadingAI}>
-      {loadingAI ? "Analyzing Photo..." : "Analyze Photo with AI"}
-    </button>
+            <p className="settingsWarning">Note: A normal web app cannot bypass your phone password from the lock screen. For demo, this Emergency ID works inside the app/APK. Real lock-screen access needs native Android lock-screen/notification permissions.</p>
+          </div>
+        </div>
+      )}
 
-    {aiResult && (
-      <p className="snapBotMessage">
-        AI Result: {aiResult.problem || "Unclear"} ({aiResult.confidence || "low"})
-      </p>
-    )}
-
-    {botMessage && <p className="snapBotMessage">{botMessage}</p>}
-  </div>
-)}
+      {botOpen && (
+        <div className="snapBotBox">
+          <div className="snapBotHeader"><div><span className="tinyLabel">AI emergency assistant</span><h3>🤖 SnapBot</h3></div><button onClick={() => setBotOpen(false)}>×</button></div>
+          <p className="snapBotText">Type the situation or upload a photo. SnapBot will open the closest safe guidance.</p>
+          <input type="text" placeholder="Example: snake bite, blood from hand, baby choking" value={botInput} onChange={(e) => setBotInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askSnapBot(); }} />
+          <div className="suggestionChips">{snapBotSuggestions.map((suggestion) => (<button key={suggestion} onClick={() => { setBotInput(suggestion); askSnapBot(suggestion); }}>{suggestion}</button>))}</div>
+          <label className="photoUploadLabel">📸 Upload / Capture Emergency Photo<input type="file" accept="image/*" capture="environment" onChange={handleImageChange} /></label>
+          {imagePreview && <img className="snapBotPreview" src={imagePreview} alt="Emergency preview" />}
+          <div className="snapBotActions"><button className="snapBotAsk" onClick={() => askSnapBot()}>Find Guidance</button><button className="snapBotAnalyze" onClick={analyzeImage} disabled={loadingAI}>{loadingAI ? "Analyzing..." : "Analyze Photo with AI"}</button></div>
+          {loadingAI && <div className="botLoader"><span></span> Checking image safely...</div>}
+          {aiResult && (<div className="aiResultCard"><strong>AI Result:</strong> {aiResult.problem || "Unclear"} ({aiResult.confidence || "low"}){aiResult.reason && <p>{aiResult.reason}</p>}</div>)}
+          {botMessage && <p className="snapBotMessage">{botMessage}</p>}
+          <p className="snapBotHint">Tip: If photo result is unclear, type simple words like “snake bite”, “bleeding”, “fracture”, “fire”.</p>
+        </div>
+      )}
       <div className={panicMode ? "panicBar showPanic" : "panicBar"}>
         <h2>🚨 {ui("PANIC MODE ACTIVE")}</h2>
         <p>{ui("Stay calm. Use emergency numbers or share your location.")}</p>
@@ -983,18 +1100,14 @@ function App() {
           <button onClick={() => callNumber(EMERGENCY_NUMBERS.sos)}>🆘 {ui("SOS 112")}</button>
         </div>
 
+        <div className="emergencyProfileStrip"><span>👤 {emergencyProfile.name || "Add your name in Emergency ID"}</span><span>🩸 {emergencyProfile.bloodGroup || "Blood group not added"}</span><span>☎️ {emergencyProfile.emergencyContactNumber || "Emergency contact not added"}</span></div>
         <div className="locationBox">
           <button onClick={getLocation}>📍 {ui("Get My Location")}</button>
+          <button onClick={useSavedLocation}>🏠 Use Saved Location</button>
           <button onClick={shareLocation}>📤 {ui("Share Location")}</button>
-          {locationText && (
-            <p>
-              {locationText.includes("google.com/maps") ? (
-                <a href={locationText} target="_blank" rel="noreferrer">{ui("Open location in Google Maps")}</a>
-              ) : (
-                locationText
-              )}
-            </p>
-          )}
+          <button onClick={shareEmergencyCard}>🪪 Share ID Card</button>
+          {locationText && (<p>{locationText.includes("google.com/maps") ? (<a href={locationText} target="_blank" rel="noreferrer">{ui("Open location in Google Maps")}</a>) : (locationText)}</p>)}
+          {locationError && <p className="locationError">{locationError}</p>}
         </div>
 
         <button className="exitPanicBtn" onClick={() => setPanicMode(false)}>{ui("Exit Panic Mode")}</button>
@@ -1030,8 +1143,11 @@ function App() {
               {darkMode ? "☀️ Light" : "🌙 Dark"}
             </button>
 
+            <div className="heroBadge">⚡ AI + Offline Emergency Guidance</div>
             <h1>{ui("SnapLearn")}</h1>
             <p>{ui("Instant emergency guidance for India when every second matters.")}</p>
+
+            <div className="heroQuickActions"><button onClick={() => setBotOpen(true)}>🤖 Ask SnapBot</button><button onClick={() => setPanicMode(true)}>🚨 Panic Mode</button><button onClick={() => setSettingsOpen(true)}>⚙️ Emergency ID</button></div>
 
             <div className="searchBox">
               <input

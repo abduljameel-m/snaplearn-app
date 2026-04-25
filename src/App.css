@@ -935,3 +935,418 @@ body {
 .dark .snapBotPreview {
   border-color: #334155;
 }
+
+/* =====================================================
+   SNAPLEARN POLISH UPDATE - TRENDY UI + SETTINGS + BOT
+   Paste-safe add-on: overrides older styles without deleting work
+===================================================== */
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --success: #0f766e;
+  --danger: #dc2626;
+  --purple: #7c3aed;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --glass: rgba(255,255,255,0.82);
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.20), transparent 35%),
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.18), transparent 35%),
+    linear-gradient(135deg, #eef2ff, #f8fafc 45%, #ecfeff);
+}
+
+.app {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.hero {
+  background:
+    linear-gradient(135deg, rgba(2, 6, 23, 0.92), rgba(37, 99, 235, 0.92), rgba(15, 118, 110, 0.92)),
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 28%);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 28px 80px rgba(37, 99, 235, 0.28);
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.22);
+  font-weight: 800;
+  margin-bottom: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.heroQuickActions {
+  margin: 22px auto 0;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.heroQuickActions button {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 900;
+  cursor: pointer;
+  background: rgba(255,255,255,0.95);
+  color: #0f172a;
+  box-shadow: 0 12px 30px rgba(15,23,42,0.16);
+}
+
+.heroQuickActions button:nth-child(2) {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.heroQuickActions button:hover,
+.card:hover,
+.snapBotAsk:hover,
+.snapBotAnalyze:hover,
+.settingsActions button:hover {
+  transform: translateY(-2px);
+}
+
+.card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255,255,255,0.90);
+  backdrop-filter: blur(16px);
+}
+
+.card .icon,
+.icon {
+  filter: drop-shadow(0 8px 14px rgba(37,99,235,0.2));
+}
+
+.topActionButtons {
+  position: fixed;
+  right: 18px;
+  bottom: 94px;
+  z-index: 140;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settingsFab,
+.snapBotButton {
+  position: static !important;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 18px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.24);
+  color: white;
+}
+
+.settingsFab {
+  background: linear-gradient(135deg, #0f766e, #2563eb);
+}
+
+.snapBotButton {
+  background: linear-gradient(135deg, #7c3aed, #2563eb) !important;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(2, 6, 23, 0.62);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.settingsPanel {
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 28px;
+  padding: 22px;
+  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.35);
+}
+
+.settingsHeader,
+.snapBotHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settingsHeader button,
+.snapBotHeader button {
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tinyLabel {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 900;
+  color: #2563eb;
+  margin-bottom: 4px;
+}
+
+.settingsNote,
+.settingsWarning,
+.snapBotHint {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.settingsWarning {
+  margin-top: 14px;
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #fed7aa;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.settingsGrid label {
+  font-weight: 800;
+  font-size: 14px;
+  color: #334155;
+}
+
+.settingsGrid input,
+.settingsGrid textarea,
+.snapBotBox input {
+  margin-top: 7px;
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 12px 14px;
+  outline: none;
+  background: #f8fafc;
+  font-weight: 650;
+}
+
+.settingsGrid textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.emergencyCardPreview {
+  margin-top: 18px;
+  border-radius: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #eff6ff, #ecfeff);
+  border: 1px solid #bfdbfe;
+}
+
+.emergencyCardPreview p {
+  margin-top: 7px;
+  color: #334155;
+}
+
+.settingsActions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.settingsActions button {
+  border: none;
+  border-radius: 14px;
+  padding: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  color: white;
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+}
+
+.snapBotBox {
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.suggestionChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+
+.suggestionChips button {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: #e0f2fe;
+  color: #075985;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.snapBotActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.aiResultCard {
+  margin-top: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.aiResultCard p {
+  margin-top: 5px;
+}
+
+.botLoader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.botLoader span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid #bfdbfe;
+  border-top-color: #2563eb;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.emergencyProfileStrip {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 12px auto;
+}
+
+.emergencyProfileStrip span {
+  background: rgba(255,255,255,0.16);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.24);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 800;
+}
+
+.locationError {
+  color: #fecaca !important;
+  font-weight: 800;
+  margin-top: 10px;
+}
+
+.dark .settingsPanel,
+.dark .snapBotBox,
+.dark .card {
+  background: rgba(15, 23, 42, 0.96);
+  color: white;
+  border-color: #334155;
+}
+
+.dark .settingsGrid label,
+.dark .emergencyCardPreview p {
+  color: #cbd5e1;
+}
+
+.dark .settingsGrid input,
+.dark .settingsGrid textarea,
+.dark .snapBotBox input {
+  background: #020617;
+  color: white;
+  border-color: #334155;
+}
+
+.dark .emergencyCardPreview,
+.dark .botLoader,
+.dark .aiResultCard {
+  background: #082f49;
+  color: #e0f2fe;
+  border-color: #075985;
+}
+
+@media (max-width: 768px) {
+  .app {
+    padding: 14px;
+  }
+
+  .hero {
+    padding: 48px 16px;
+    border-radius: 24px;
+  }
+
+  .heroQuickActions,
+  .settingsActions,
+  .snapBotActions {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .topActionButtons {
+    right: 12px;
+    bottom: 88px;
+  }
+
+  .settingsFab,
+  .snapBotButton {
+    font-size: 12px;
+    padding: 11px 13px;
+  }
+
+  .settingsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .snapBotBox {
+    bottom: 145px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}

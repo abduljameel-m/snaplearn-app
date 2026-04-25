@@ -38,6 +38,10 @@ const SNAP_BOT_SUGGESTIONS = [
   "bee sting",
 ];
 
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 
 /* =====================================================
    ONLINE TRANSLATION LANGUAGE CODES
@@ -507,6 +511,7 @@ function App() {
   const [botOpen, setBotOpen] = useState(false);
   const [botInput, setBotInput] = useState("");
   const [botMessage, setBotMessage] = useState("");
+  const [botError, setBotError] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
@@ -698,17 +703,18 @@ function App() {
       },
       (error) => {
         if (error.code === 1) {
-          setLocationError("Location permission denied. Open browser site settings and allow Location, or use your saved manual location.");
+          setLocationError("Location permission denied. Using saved location if available. You can allow Location from browser site settings.");
         } else if (error.code === 2) {
-          setLocationError("Location unavailable. Check GPS/mobile data or use saved manual location.");
+          setLocationError("Location unavailable. Using saved location if available.");
         } else {
-          setLocationError("Location request timed out. Try again or use saved manual location.");
+          setLocationError("Location request timed out. Using saved location if available.");
         }
 
         if (manualLocation.trim()) {
           setLocationText(`Saved location: ${manualLocation}`);
         } else {
           setLocationText("");
+          setSettingsOpen(true);
         }
       },
       {
@@ -755,7 +761,18 @@ function App() {
   }
 
   function emergencyMatches(emergency, keyword) {
-    return (
+  
+  function safeAskSnapBot(inputValue = botInput) {
+    try {
+      setBotError("");
+      askSnapBot(inputValue);
+    } catch (error) {
+      console.error("SnapBot failed:", error);
+      setBotError("⚠️ SnapBot had a small issue. Try simple words like: snake bite, bleeding, fire, choking.");
+    }
+  }
+
+  return (
       emergency.name.toLowerCase().includes(keyword) ||
       emergency.problems.some((problem) => problemMatches(problem, keyword))
     );
@@ -1121,29 +1138,92 @@ function App() {
 
       {botOpen && (
         <div className="snapBotBox">
-          <div className="snapBotHeader"><div><span className="tinyLabel">AI emergency assistant</span><h3>🤖 SnapBot</h3></div><button onClick={() => setBotOpen(false)}>×</button></div>
-          <p className="snapBotText">Type the situation or upload a photo. SnapBot will open the closest safe guidance.</p>
-          <input type="text" placeholder="Example: snake bite, blood from hand, baby choking" value={botInput} onChange={(e) => setBotInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askSnapBot(); }} />
+          <div className="snapBotHeader">
+            <div>
+              <span className="tinyLabel">AI emergency assistant</span>
+              <h3>🤖 SnapBot</h3>
+            </div>
+            <button onClick={() => setBotOpen(false)}>×</button>
+          </div>
+
+          <p className="snapBotText">
+            Type the situation or upload a photo. SnapBot will open the closest safe guidance.
+          </p>
+
+          <input
+            type="text"
+            placeholder="Example: snake bite, blood from hand, baby choking"
+            value={botInput}
+            onChange={(e) => setBotInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") safeAskSnapBot();
+            }}
+          />
+
           <div className="suggestionChips">
-            {SNAP_BOT_SUGGESTIONS.map((suggestion) => (
+            {safeArray(SNAP_BOT_SUGGESTIONS).map((suggestion) => (
               <button
                 key={suggestion}
                 onClick={() => {
                   setBotInput(suggestion);
-                  askSnapBot(suggestion);
+                  safeAskSnapBot(suggestion);
                 }}
               >
                 {suggestion}
               </button>
             ))}
           </div>
-          <label className="photoUploadLabel">📸 Upload / Capture Emergency Photo<input type="file" accept="image/*" capture="environment" onChange={handleImageChange} /></label>
-          {imagePreview && <img className="snapBotPreview" src={imagePreview} alt="Emergency preview" />}
-          <div className="snapBotActions"><button className="snapBotAsk" onClick={() => askSnapBot()}>Find Guidance</button><button className="snapBotAnalyze" onClick={analyzeImage} disabled={loadingAI}>{loadingAI ? "Analyzing..." : "Analyze Photo with AI"}</button></div>
-          {loadingAI && <div className="botLoader"><span></span> Checking image safely...</div>}
-          {aiResult && (<div className="aiResultCard"><strong>AI Result:</strong> {aiResult.problem || "Unclear"} ({aiResult.confidence || "low"}){aiResult.reason && <p>{aiResult.reason}</p>}</div>)}
+
+          <label className="photoUploadLabel">
+            📸 Upload / Capture Emergency Photo
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageChange}
+            />
+          </label>
+
+          {imagePreview && (
+            <img
+              className="snapBotPreview"
+              src={imagePreview}
+              alt="Emergency preview"
+            />
+          )}
+
+          <div className="snapBotActions">
+            <button className="snapBotAsk" onClick={() => safeAskSnapBot()}>
+              Find Guidance
+            </button>
+            <button
+              className="snapBotAnalyze"
+              onClick={analyzeImage}
+              disabled={loadingAI}
+            >
+              {loadingAI ? "Analyzing..." : "Analyze Photo with AI"}
+            </button>
+          </div>
+
+          {loadingAI && (
+            <div className="botLoader">
+              <span></span> Checking image safely...
+            </div>
+          )}
+
+          {aiResult && (
+            <div className="aiResultCard">
+              <strong>AI Result:</strong> {aiResult.problem || "Unclear"} ({aiResult.confidence || "low"})
+              {aiResult.reason && <p>{aiResult.reason}</p>}
+            </div>
+          )}
+
+          {botError && <p className="snapBotMessage errorMessage">{botError}</p>}
           {botMessage && <p className="snapBotMessage">{botMessage}</p>}
-          <p className="snapBotHint">Tip: If photo result is unclear, type simple words like “snake bite”, “bleeding”, “fracture”, “fire”.</p>
+
+          <p className="snapBotHint">
+            Tip: If photo result is unclear, type simple words like “snake bite”, “bleeding”, “fracture”, “fire”.
+          </p>
         </div>
       )}
       <div className={panicMode ? "panicBar showPanic" : "panicBar"}>

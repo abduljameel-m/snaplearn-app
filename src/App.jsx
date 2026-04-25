@@ -27,6 +27,18 @@ const EMERGENCY_NUMBERS = {
   sos: "112",
 };
 
+const SNAP_BOT_SUGGESTIONS = [
+  "snake bite",
+  "heavy bleeding",
+  "hand fracture",
+  "head injury",
+  "clothes on fire",
+  "baby choking",
+  "dog bite",
+  "bee sting",
+];
+
+
 /* =====================================================
    ONLINE TRANSLATION LANGUAGE CODES
    Used only for step instructions and voice guidance.
@@ -507,9 +519,21 @@ function App() {
 
     if (savedProfile) {
       try {
-        return JSON.parse(savedProfile);
+        return JSON.parse(savedProfile) || {
+          name: "",
+          emergencyContactName: "",
+          emergencyContactNumber: "",
+          bloodGroup: "",
+          medicalNotes: "",
+        };
       } catch {
-        return null;
+        return {
+          name: "",
+          emergencyContactName: "",
+          emergencyContactNumber: "",
+          bloodGroup: "",
+          medicalNotes: "",
+        };
       }
     }
 
@@ -731,16 +755,7 @@ function App() {
   }
 
   function emergencyMatches(emergency, keyword) {
-    const snapBotSuggestions = [
-    "snake bite",
-    "heavy bleeding",
-    "hand fracture",
-    "head injury",
-    "clothes on fire",
-    "baby choking",
-  ];
-
-  return (
+    return (
       emergency.name.toLowerCase().includes(keyword) ||
       emergency.problems.some((problem) => problemMatches(problem, keyword))
     );
@@ -959,12 +974,44 @@ function App() {
     const userText = normalizeText(inputValue);
 
     if (userText === "") {
-      setBotMessage("Please type your emergency problem.");
+      setBotMessage("⚠️ Please type your emergency problem. Example: snake bite, bleeding, fire, choking.");
       return;
     }
 
+    setBotMessage("🔍 Finding the best guidance...");
+
+    const quickRules = [
+      { words: ["snake", "snakebite", "cobra", "viper", "venom", "fang"], problem: "Snake Bite" },
+      { words: ["dog", "rabies"], problem: "Dog Bite" },
+      { words: ["bee", "wasp", "sting", "insect"], problem: "Bee / Wasp Sting" },
+      { words: ["blood", "bleeding", "wound", "cut", "gash"], problem: "Heavy Bleeding" },
+      { words: ["fracture", "broken", "bone", "bent hand", "bent leg"], problem: "Hand / Leg Fracture" },
+      { words: ["head", "helmet", "brain"], problem: "Head Injury" },
+      { words: ["cloth fire", "clothes fire", "dress fire", "burning clothes"], problem: "Clothes on Fire" },
+      { words: ["fire", "flame", "kitchen fire", "room fire"], problem: "Room Fire" },
+      { words: ["smoke", "gas", "suffocation"], problem: "Smoke Inhalation" },
+      { words: ["baby choking", "infant choking"], problem: "Baby Choking" },
+      { words: ["choking", "throat", "food stuck"], problem: "Adult Choking" },
+      { words: ["earthquake"], problem: "Earthquake" },
+      { words: ["flood", "water"], problem: "Flood" },
+      { words: ["collapse", "debris", "building fall"], problem: "Building Collapse" },
+      { words: ["not breathing", "no breathing", "unconscious"], problem: "Person Not Breathing" },
+      { words: ["no pulse", "heartbeat", "cardiac"], problem: "No Pulse" },
+    ];
+
+    for (let rule of quickRules) {
+      if (rule.words.some((word) => userText.includes(normalizeText(word)))) {
+        const match = getProblemByTitle(rule.problem);
+        if (match) {
+          openGuidance(match.emergency, match.problem, `✅ Quick match: ${match.problem.title}`);
+          setBotInput("");
+          return;
+        }
+      }
+    }
+
     const fakeAiData = {
-      emergency: "",
+      emergency: userText,
       problem: userText,
       reason: userText,
       description: userText,
@@ -977,14 +1024,14 @@ function App() {
       openGuidance(
         smartMatch.emergency,
         smartMatch.problem,
-        `Found guidance for: ${smartMatch.problem.title}`
+        `✅ Found guidance for: ${smartMatch.problem.title}`
       );
       setBotInput("");
       return;
     }
 
-    let foundEmergency = null;
-    let foundProblem = null;
+    let bestMatch = null;
+    let bestScore = 0;
 
     for (let emergency of EMERGENCIES) {
       for (let problem of emergency.problems) {
@@ -996,27 +1043,24 @@ function App() {
         `);
 
         const userWords = userText.split(" ").filter((word) => word.length > 2);
-        const matchedWords = userWords.filter((word) => searchText.includes(word));
+        const score = userWords.filter((word) => searchText.includes(word)).length;
 
-        if (searchText.includes(userText) || matchedWords.length >= 2) {
-          foundEmergency = emergency;
-          foundProblem = problem;
-          break;
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = { emergency, problem };
         }
       }
-
-      if (foundEmergency) break;
     }
 
-    if (foundEmergency && foundProblem) {
+    if (bestMatch && bestScore >= 1) {
       openGuidance(
-        foundEmergency,
-        foundProblem,
-        `Found guidance for: ${foundProblem.title}`
+        bestMatch.emergency,
+        bestMatch.problem,
+        `✅ Closest guidance: ${bestMatch.problem.title}`
       );
       setBotInput("");
     } else {
-      setBotMessage("Sorry, I could not find exact guidance. Try words like snake bite, bleeding, fire, choking, head injury.");
+      setBotMessage("❌ I could not clearly understand. Try simple words like: snake bite, bleeding, fracture, fire, choking, dog bite.");
     }
   }
 
@@ -1080,7 +1124,19 @@ function App() {
           <div className="snapBotHeader"><div><span className="tinyLabel">AI emergency assistant</span><h3>🤖 SnapBot</h3></div><button onClick={() => setBotOpen(false)}>×</button></div>
           <p className="snapBotText">Type the situation or upload a photo. SnapBot will open the closest safe guidance.</p>
           <input type="text" placeholder="Example: snake bite, blood from hand, baby choking" value={botInput} onChange={(e) => setBotInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askSnapBot(); }} />
-          <div className="suggestionChips">{snapBotSuggestions.map((suggestion) => (<button key={suggestion} onClick={() => { setBotInput(suggestion); askSnapBot(suggestion); }}>{suggestion}</button>))}</div>
+          <div className="suggestionChips">
+            {SNAP_BOT_SUGGESTIONS.map((suggestion) => (
+              <button
+                key={suggestion}
+                onClick={() => {
+                  setBotInput(suggestion);
+                  askSnapBot(suggestion);
+                }}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
           <label className="photoUploadLabel">📸 Upload / Capture Emergency Photo<input type="file" accept="image/*" capture="environment" onChange={handleImageChange} /></label>
           {imagePreview && <img className="snapBotPreview" src={imagePreview} alt="Emergency preview" />}
           <div className="snapBotActions"><button className="snapBotAsk" onClick={() => askSnapBot()}>Find Guidance</button><button className="snapBotAnalyze" onClick={analyzeImage} disabled={loadingAI}>{loadingAI ? "Analyzing..." : "Analyze Photo with AI"}</button></div>

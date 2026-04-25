@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /* =====================================================
    SNAPLEARN - EMERGENCY MICRO LEARNING APP
@@ -500,6 +500,7 @@ const STEP_TRANSLATIONS = {
 ===================================================== */
 
 function App() {
+  const panicRef = useRef(null);
   const [darkMode, setDarkMode] = useState(false);
   const [selectedEmergency, setSelectedEmergency] = useState(null);
   const [selectedProblem, setSelectedProblem] = useState(null);
@@ -761,18 +762,7 @@ function App() {
   }
 
   function emergencyMatches(emergency, keyword) {
-  
-  function safeAskSnapBot(inputValue = botInput) {
-    try {
-      setBotError("");
-      askSnapBot(inputValue);
-    } catch (error) {
-      console.error("SnapBot failed:", error);
-      setBotError("⚠️ SnapBot had a small issue. Try simple words like: snake bite, bleeding, fire, choking.");
-    }
-  }
-
-  return (
+    return (
       emergency.name.toLowerCase().includes(keyword) ||
       emergency.problems.some((problem) => problemMatches(problem, keyword))
     );
@@ -1081,6 +1071,27 @@ function App() {
     }
   }
 
+  function safeAskSnapBot(inputValue = botInput) {
+    try {
+      setBotError("");
+      askSnapBot(inputValue);
+    } catch (error) {
+      console.error("SnapBot failed:", error);
+      setBotError("⚠️ SnapBot had a small issue. Try simple words like: snake bite, bleeding, fire, choking.");
+    }
+  }
+
+  function openPanicMode() {
+    setPanicMode(true);
+
+    setTimeout(() => {
+      panicRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 80);
+  }
+
   return (
     <div className={darkMode ? "app dark" : "app"}>
       <div className="topActionButtons">
@@ -1226,7 +1237,10 @@ function App() {
           </p>
         </div>
       )}
-      <div className={panicMode ? "panicBar showPanic" : "panicBar"}>
+      <div
+        ref={panicRef}
+        className={panicMode ? "panicBar showPanic" : "panicBar"}
+      >
         <h2>🚨 {ui("PANIC MODE ACTIVE")}</h2>
         <p>{ui("Stay calm. Use emergency numbers or share your location.")}</p>
 
@@ -1251,7 +1265,7 @@ function App() {
 
       <div className="floatingSOS">
         {!panicMode && (
-          <button className="panicBtn" onClick={() => setPanicMode(true)}>🚨 {ui("Panic")}</button>
+          <button className="panicBtn" onClick={openPanicMode}>🚨 {ui("Panic")}</button>
         )}
 
         {panicMode && (

@@ -1350,3 +1350,638 @@ body {
     overflow-y: auto;
   }
 }
+
+
+
+/* =====================================================
+   SNAPLEARN FINAL CLASSY UI/UX UPDATE
+   Safe override layer — keep this at the bottom.
+   Improves buttons, panic popup, SnapBot, cards, mobile UX.
+===================================================== */
+
+:root {
+  --snap-red: #dc2626;
+  --snap-red-dark: #991b1b;
+  --snap-blue: #2563eb;
+  --snap-blue-dark: #1d4ed8;
+  --snap-teal: #0f766e;
+  --snap-purple: #7c3aed;
+  --snap-dark: #020617;
+  --snap-ink: #0f172a;
+  --snap-muted: #64748b;
+  --snap-soft: #f8fafc;
+  --snap-border: rgba(148, 163, 184, 0.28);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--snap-ink);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.18), transparent 28%),
+    radial-gradient(circle at 90% 5%, rgba(124, 58, 237, 0.16), transparent 30%),
+    radial-gradient(circle at 75% 90%, rgba(15, 118, 110, 0.15), transparent 32%),
+    linear-gradient(135deg, #eef2ff, #f8fafc 42%, #ecfeff);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+button {
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-bottom: 115px;
+}
+
+/* HERO — cleaner premium look */
+.hero {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background:
+    linear-gradient(135deg, rgba(2, 6, 23, 0.96), rgba(37, 99, 235, 0.94), rgba(15, 118, 110, 0.94)),
+    radial-gradient(circle at 25% 25%, rgba(255,255,255,0.22), transparent 30%);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 32px 90px rgba(37, 99, 235, 0.28);
+}
+
+.hero h1 {
+  font-weight: 950;
+  letter-spacing: -1.4px;
+  text-shadow: 0 14px 34px rgba(0,0,0,0.28);
+}
+
+.hero p {
+  max-width: 760px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.heroBadge {
+  color: white;
+}
+
+.searchBox input {
+  border: 1px solid rgba(255,255,255,0.36);
+  background: rgba(255,255,255,0.96);
+  font-weight: 750;
+}
+
+.searchBox input:focus,
+.snapBotBox input:focus,
+.settingsGrid input:focus,
+.settingsGrid textarea:focus {
+  border-color: var(--snap-blue);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+/* Floating action buttons */
+.topActionButtons {
+  position: fixed;
+  right: 18px;
+  bottom: 94px;
+  z-index: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settingsFab,
+.snapBotButton,
+.floatingSOS button {
+  min-height: 46px;
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(14px);
+  letter-spacing: 0.01em;
+}
+
+.settingsFab {
+  background: linear-gradient(135deg, #0f766e, #2563eb) !important;
+}
+
+.snapBotButton {
+  background: linear-gradient(135deg, #7c3aed, #2563eb) !important;
+}
+
+/* Cards — decent product style */
+.card,
+.statItem,
+.details,
+.visualStep {
+  border: 1px solid var(--snap-border);
+}
+
+.card {
+  min-height: 195px;
+  background: rgba(255,255,255,0.88);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.11);
+}
+
+.card:hover {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 26px 52px rgba(15,23,42,0.18);
+}
+
+.card::after {
+  transition: padding 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover::after {
+  padding-inline: 22px;
+}
+
+.icon {
+  filter: drop-shadow(0 10px 18px rgba(37,99,235,0.22));
+}
+
+.visualStep {
+  background: rgba(255,255,255,0.78);
+}
+
+.visualStep:hover {
+  transform: translateX(5px);
+  background: #ffffff;
+}
+
+/* PANIC MODE — instant visible overlay */
+.panicBar {
+  display: none;
+}
+
+.showPanic {
+  display: block;
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: min(680px, calc(100% - 24px));
+  z-index: 9999;
+  background:
+    linear-gradient(135deg, rgba(220, 38, 38, 0.98), rgba(153, 27, 27, 0.98)),
+    radial-gradient(circle at top left, rgba(255,255,255,0.2), transparent 32%);
+  color: white;
+  padding: 20px;
+  border-radius: 24px;
+  margin: 0;
+  text-align: center;
+  box-shadow: 0 28px 70px rgba(153, 27, 27, 0.45);
+  border: 1px solid rgba(255,255,255,0.22);
+  animation: panicPop 0.28s ease;
+}
+
+.showPanic h2 {
+  margin-bottom: 8px;
+  font-size: 25px;
+  letter-spacing: 0.02em;
+}
+
+.showPanic p {
+  opacity: 0.95;
+  line-height: 1.5;
+}
+
+@keyframes panicPop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.panicActions {
+  gap: 10px;
+}
+
+.panicActions button {
+  background: rgba(255,255,255,0.96);
+  color: #991b1b;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.16);
+}
+
+.exitPanicBtn {
+  background: #111827 !important;
+  color: white !important;
+  box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+}
+
+/* Floating SOS bar */
+.floatingSOS {
+  z-index: 650;
+}
+
+.floatingSOS button {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+}
+
+.floatingSOS .panicBtn {
+  background: linear-gradient(135deg, #111827, #020617);
+}
+
+/* SnapBot — classy assistant modal */
+.snapBotBox {
+  position: fixed;
+  right: 18px;
+  bottom: 162px;
+  width: 390px;
+  max-height: 74vh;
+  overflow-y: auto;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+  border-radius: 30px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  padding: 18px;
+  z-index: 760;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.30);
+}
+
+.snapBotHeader h3 {
+  font-size: 22px;
+}
+
+.snapBotHeader button,
+.settingsHeader button {
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.snapBotText,
+.snapBotHint {
+  line-height: 1.55;
+}
+
+.snapBotBox input {
+  margin-top: 0;
+  margin-bottom: 12px;
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.suggestionChips {
+  gap: 8px;
+}
+
+.suggestionChips button {
+  background: linear-gradient(135deg, #e0f2fe, #eff6ff);
+  color: #075985;
+  border: 1px solid #bae6fd;
+}
+
+.suggestionChips button:hover {
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+  color: white;
+}
+
+.photoUploadLabel {
+  background: linear-gradient(135deg, #f8fafc, #eff6ff);
+  border: 1.6px dashed #60a5fa;
+}
+
+.photoUploadLabel:hover {
+  background: #dbeafe;
+}
+
+.snapBotActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.snapBotAsk,
+.snapBotAnalyze {
+  min-height: 46px;
+  margin-top: 0;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.20);
+}
+
+.snapBotAsk {
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+}
+
+.snapBotAnalyze {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+}
+
+.snapBotMessage {
+  white-space: pre-line;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 11px 13px;
+  border-radius: 15px;
+  line-height: 1.5;
+}
+
+.errorMessage {
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  border-color: #fecaca !important;
+}
+
+.aiResultCard {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+  box-shadow: inset 0 0 0 1px rgba(22, 101, 52, 0.08);
+}
+
+.botLoader {
+  background: #eff6ff;
+}
+
+.botLoader span {
+  flex: 0 0 auto;
+}
+
+/* Settings modal */
+.modalOverlay {
+  animation: fadeIn 0.22s ease;
+}
+
+.settingsPanel {
+  animation: slideUp 0.25s ease;
+}
+
+.settingsActions button {
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+}
+
+.emergencyCardPreview {
+  box-shadow: inset 0 0 0 1px rgba(37,99,235,0.10);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Dark mode polish */
+.dark {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(37,99,235,0.20), transparent 30%),
+    radial-gradient(circle at 90% 20%, rgba(124,58,237,0.14), transparent 30%),
+    linear-gradient(135deg, #020617, #0f172a, #111827);
+}
+
+.dark .snapBotBox,
+.dark .settingsPanel,
+.dark .card,
+.dark .details,
+.dark .statItem {
+  background: rgba(15, 23, 42, 0.96);
+  color: white;
+  border-color: #334155;
+}
+
+.dark .snapBotMessage {
+  background: #020617;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+.dark .photoUploadLabel:hover,
+.dark .visualStep:hover {
+  background: #0f172a;
+}
+
+.dark .suggestionChips button {
+  background: #0f172a;
+  color: #bfdbfe;
+  border-color: #334155;
+}
+
+.dark .suggestionChips button:hover {
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+  color: white;
+}
+
+/* Better accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
+}
+
+/* Mobile UX */
+@media (max-width: 768px) {
+  .app {
+    padding: 12px;
+    padding-bottom: 112px;
+  }
+
+  .hero {
+    min-height: auto;
+    padding: 42px 16px 34px;
+    border-radius: 24px;
+  }
+
+  .hero h1 {
+    font-size: 38px;
+  }
+
+  .hero::before {
+    font-size: 95px;
+    left: 8px;
+    top: 8px;
+  }
+
+  .hero::after {
+    font-size: 85px;
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .languageBox {
+    width: 100%;
+    max-width: 240px;
+    margin: 0 auto 12px;
+  }
+
+  .themeToggle {
+    width: 100%;
+    max-width: 240px;
+  }
+
+  .statsBox {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .statItem {
+    border-radius: 16px;
+    padding: 13px 8px;
+  }
+
+  .statItem h3 {
+    font-size: 20px;
+  }
+
+  .statItem p {
+    font-size: 11px;
+  }
+
+  .card {
+    min-height: auto;
+    padding: 22px 18px;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+  }
+
+  .details {
+    margin-bottom: 96px;
+  }
+
+  .visualStep {
+    align-items: center;
+    text-align: center;
+  }
+
+  .topActionButtons {
+    left: 10px;
+    right: 10px;
+    bottom: 76px;
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .settingsFab,
+  .snapBotButton {
+    flex: 1;
+    min-height: 46px;
+    text-align: center;
+    padding: 12px 10px;
+    font-size: 12px;
+  }
+
+  .floatingSOS {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .floatingSOS button {
+    min-height: 45px;
+  }
+
+  .snapBotBox {
+    left: 10px;
+    right: 10px;
+    bottom: 136px;
+    width: auto;
+    max-height: 66vh;
+    overflow-y: auto;
+    border-radius: 24px;
+    padding: 14px;
+  }
+
+  .snapBotActions {
+    grid-template-columns: 1fr;
+  }
+
+  .suggestionChips {
+    gap: 6px;
+  }
+
+  .suggestionChips button {
+    flex: 1;
+    min-width: 45%;
+  }
+
+  .settingsPanel {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .settingsActions {
+    grid-template-columns: 1fr;
+  }
+
+  .showPanic {
+    top: 12px;
+    width: calc(100% - 20px);
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .showPanic h2 {
+    font-size: 20px;
+  }
+
+  .panicActions {
+    flex-direction: column;
+  }
+
+  .panicActions button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero h1 {
+    font-size: 32px;
+  }
+
+  .statsBox {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsFab,
+  .snapBotButton,
+  .floatingSOS button {
+    font-size: 12px;
+  }
+
+  .snapBotBox {
+    bottom: 132px;
+  }
+}
+
+/* Reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+

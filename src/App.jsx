@@ -719,7 +719,9 @@ const STEP_TRANSLATIONS = {
 
 function App() {
   const panicRef = useRef(null);
+  const searchResultsRef = useRef(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [selectedEmergency, setSelectedEmergency] = useState(null);
   const [selectedProblem, setSelectedProblem] = useState(null);
   const [search, setSearch] = useState("");
@@ -787,6 +789,20 @@ function App() {
     localStorage.setItem("snaplearnManualLocation", manualLocation);
   }, [manualLocation]);
 
+  useEffect(() => {
+    function updateNetworkStatus() {
+      setIsOnline(navigator.onLine);
+    }
+
+    window.addEventListener("online", updateNetworkStatus);
+    window.addEventListener("offline", updateNetworkStatus);
+
+    return () => {
+      window.removeEventListener("online", updateNetworkStatus);
+      window.removeEventListener("offline", updateNetworkStatus);
+    };
+  }, []);
+
   function updateProfile(field, value) {
     setEmergencyProfile((previousProfile) => ({
       ...previousProfile,
@@ -845,6 +861,8 @@ function App() {
       STEP_TRANSLATIONS[targetLanguage]?.[text] || DATA_TRANSLATIONS[targetLanguage]?.[text];
 
     if (staticTranslation) return staticTranslation;
+
+    if (!navigator.onLine) return text;
 
     const cacheKey = getCacheKey(text, targetLanguage);
     if (translationCache[cacheKey]) return translationCache[cacheKey];
@@ -992,6 +1010,19 @@ function App() {
     return emergencyMatches(emergency, searchKeyword);
   });
 
+  useEffect(() => {
+    if (!searchKeyword) return;
+
+    const timer = setTimeout(() => {
+      searchResultsRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [searchKeyword]);
+
   function getMatchedProblems(emergency) {
     if (searchKeyword === "") return [];
     return emergency.problems.filter((problem) => problemMatches(problem, searchKeyword));
@@ -1115,6 +1146,27 @@ Matched clue: "${match.matchedAlias || "smart detection"}"
   async function analyzeImage() {
     if (!imageFile) {
       setBotMessage("Please upload or capture an image first.");
+      return;
+    }
+
+    if (!navigator.onLine) {
+      setAiResult({
+        problem: "Offline Mode",
+        confidence: "offline",
+        reason: "Image AI needs internet. Text guidance and emergency steps still work offline.",
+      });
+      setBotMessage(
+        `📴 Offline Mode Active.
+
+Photo AI needs internet, but SnapLearn still works offline.
+Type simple words like:
+• snake bite
+• bleeding
+• fire
+• flood
+• earthquake
+• choking`
+      );
       return;
     }
 
@@ -1323,7 +1375,18 @@ Try simple keywords like:
     }, 80);
   }
 
+  function resetSnapBot() {
+    setBotInput("");
+    setBotMessage("👋 Hi, I am SnapBot. How may I help you? Type your emergency or upload a photo.");
+    setBotError("");
+    setImageFile(null);
+    setImagePreview("");
+    setAiResult(null);
+    setLoadingAI(false);
+  }
+
   function openSnapBotAssistant() {
+    setSettingsOpen(false);
     setBotOpen(true);
 
     if (!botIntroSeen && !botMessage) {
@@ -1335,7 +1398,7 @@ Try simple keywords like:
   return (
     <div className={darkMode ? "app dark" : "app"}>
       <div className="topActionButtons">
-        <button className="settingsFab" onClick={() => setSettingsOpen(true)}>
+        <button className="settingsFab" onClick={() => { setBotOpen(false); setSettingsOpen(true); }}>
           ⚙️ Emergency ID
         </button>
 
@@ -1407,7 +1470,15 @@ Try simple keywords like:
                 <h3>SnapBot</h3>
               </div>
             </div>
-            <button aria-label="Close SnapBot" onClick={() => setBotOpen(false)}>×</button>
+            <div className="snapBotHeaderActions">
+              <button className="botRefreshBtn" type="button" aria-label="Refresh SnapBot" onClick={resetSnapBot}>↻</button>
+              <button aria-label="Close SnapBot" onClick={() => setBotOpen(false)}>×</button>
+            </div>
+          </div>
+
+          <div className={isOnline ? "botNetworkLine online" : "botNetworkLine offline"}>
+            <span></span>
+            {isOnline ? "Online: AI photo analysis available" : "Offline: text guidance still works"}
           </div>
 
           <div className="botWelcomeCard">
@@ -1494,9 +1565,9 @@ Try simple keywords like:
             <button
               className="snapBotAnalyze"
               onClick={analyzeImage}
-              disabled={loadingAI}
+              disabled={loadingAI || !isOnline}
             >
-              {loadingAI ? "Analyzing..." : "Analyze Photo with AI"}
+              {loadingAI ? "Analyzing..." : isOnline ? "Analyze Photo with AI" : "AI needs internet"}
             </button>
           </div>
 
@@ -1564,7 +1635,12 @@ Try simple keywords like:
       {!selectedEmergency && (
         <>
           <div className="hero">
-            <div className="languageBox">
+            
+        <div className={isOnline ? "networkBadge online" : "networkBadge offline"}>
+          <span></span>
+          {isOnline ? "Online" : "Offline"}
+        </div>
+<div className="languageBox">
               🌐
               <select value={language} onChange={(e) => setLanguage(e.target.value)}>
                 {LANGUAGES.map((lang, index) => (
@@ -1599,7 +1675,7 @@ Try simple keywords like:
             <div className="statItem"><h3>{totalSteps}+</h3><p>{ui("Action Steps")}</p></div>
           </div>
 
-          <div className="cards">
+          <div className="cards" ref={searchResultsRef}>
             {filteredEmergencies.map((emergency, index) => {
               const matchedProblems = getMatchedProblems(emergency);
               return (

@@ -728,6 +728,7 @@ function App() {
   const [language, setLanguage] = useState("English");
   const [translationCache, setTranslationCache] = useState({});
   const [botOpen, setBotOpen] = useState(false);
+  const [botIntroSeen, setBotIntroSeen] = useState(false);
   const [botInput, setBotInput] = useState("");
   const [botMessage, setBotMessage] = useState("");
   const [botError, setBotError] = useState("");
@@ -1322,6 +1323,15 @@ Try simple keywords like:
     }, 80);
   }
 
+  function openSnapBotAssistant() {
+    setBotOpen(true);
+
+    if (!botIntroSeen && !botMessage) {
+      setBotMessage("👋 Hi, I am SnapBot. How may I help you? Type your emergency or upload a photo.");
+      setBotIntroSeen(true);
+    }
+  }
+
   return (
     <div className={darkMode ? "app dark" : "app"}>
       <div className="topActionButtons">
@@ -1329,8 +1339,15 @@ Try simple keywords like:
           ⚙️ Emergency ID
         </button>
 
-        <button className="snapBotButton" onClick={() => setBotOpen(true)}>
-          🤖 SnapBot
+        <button className="snapBotButton snapBotAvatarButton" onClick={openSnapBotAssistant}>
+          <span className="botAvatar">
+            <span className="botHead">🤖</span>
+            <span className="botPulse"></span>
+          </span>
+          <span className="botButtonText">
+            <strong>SnapBot</strong>
+            <small>How may I help?</small>
+          </span>
         </button>
       </div>
 
@@ -1378,28 +1395,46 @@ Try simple keywords like:
       )}
 
       {botOpen && (
-        <div className="snapBotBox">
+        <div className="snapBotBox snapBotPanelSmooth">
           <div className="snapBotHeader">
-            <div>
-              <span className="tinyLabel">AI emergency assistant</span>
-              <h3>🤖 SnapBot</h3>
+            <div className="snapBotIdentity">
+              <div className="standingBot" aria-hidden="true">
+                <span className="botFace">🤖</span>
+                <span className="botShadow"></span>
+              </div>
+              <div>
+                <span className="tinyLabel">AI emergency assistant</span>
+                <h3>SnapBot</h3>
+              </div>
             </div>
-            <button onClick={() => setBotOpen(false)}>×</button>
+            <button aria-label="Close SnapBot" onClick={() => setBotOpen(false)}>×</button>
+          </div>
+
+          <div className="botWelcomeCard">
+            <div className="botBubble">
+              <strong>Hi, how may I help you?</strong>
+              <span>Type the situation, choose a quick chip, or upload a photo.</span>
+            </div>
           </div>
 
           <p className="snapBotText">
-            Type the situation or upload a photo. SnapBot will open the closest safe guidance.
+            SnapBot will match your input with the safest emergency guidance available in SnapLearn.
           </p>
 
-          <input
-            type="text"
-            placeholder="Example: earthquake, flood, building collapse, bleeding, snake bite"
-            value={botInput}
-            onChange={(e) => setBotInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") safeAskSnapBot();
-            }}
-          />
+          <div className="snapBotInputWrap">
+            <input
+              type="text"
+              placeholder="Example: earthquake, bleeding, snake bite, baby choking"
+              value={botInput}
+              onChange={(e) => setBotInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") safeAskSnapBot();
+              }}
+            />
+            <button className="miniSendBtn" onClick={() => safeAskSnapBot()}>
+              Find
+            </button>
+          </div>
 
           <div className="suggestionChips">
             {safeArray(SNAP_BOT_SUGGESTIONS).map((suggestion) => (
@@ -1415,22 +1450,41 @@ Try simple keywords like:
             ))}
           </div>
 
-          <label className="photoUploadLabel">
-            📸 Upload / Capture Emergency Photo
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleImageChange}
-            />
-          </label>
+          <div className="snapBotFlowCards">
+            <label className="photoUploadLabel snapBotFlowCard">
+              <span>📸</span>
+              <strong>Upload / Capture Photo</strong>
+              <small>Use camera for visual emergency detection</small>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageChange}
+              />
+            </label>
+
+            <button className="snapBotFlowCard guidanceFlowCard" onClick={() => safeAskSnapBot()}>
+              <span>🧭</span>
+              <strong>Find Guidance</strong>
+              <small>Open the closest emergency steps</small>
+            </button>
+          </div>
 
           {imagePreview && (
-            <img
-              className="snapBotPreview"
-              src={imagePreview}
-              alt="Emergency preview"
-            />
+            <div className="previewWrap">
+              <img
+                className="snapBotPreview"
+                src={imagePreview}
+                alt="Emergency preview"
+              />
+              <button className="clearPreviewBtn" onClick={() => {
+                setImageFile(null);
+                setImagePreview("");
+                setAiResult(null);
+              }}>
+                Remove photo
+              </button>
+            </div>
           )}
 
           <div className="snapBotActions">
@@ -1463,7 +1517,7 @@ Try simple keywords like:
           {botMessage && <p className="snapBotMessage">{botMessage}</p>}
 
           <p className="snapBotHint">
-            Tip: If photo result is unclear, type simple words like “snake bite”, “bleeding”, “fracture”, “fire”.
+            Safety tip: If SnapBot is unclear, choose the emergency category manually.
           </p>
         </div>
       )}

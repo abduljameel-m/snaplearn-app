@@ -50,6 +50,14 @@ function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function normalizeSnapText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 
 const SNAP_BOT_EMERGENCY_ALIASES = [
   {
@@ -172,8 +180,8 @@ const SNAP_BOT_EMERGENCY_ALIASES = [
 ];
 
 function levenshteinDistance(a, b) {
-  const textA = normalizeText(a);
-  const textB = normalizeText(b);
+  const textA = normalizeSnapText(a);
+  const textB = normalizeSnapText(b);
 
   if (!textA) return textB.length;
   if (!textB) return textA.length;
@@ -200,8 +208,8 @@ function levenshteinDistance(a, b) {
 }
 
 function aliasMatchScore(userText, alias) {
-  const normalizedUser = normalizeText(userText);
-  const normalizedAlias = normalizeText(alias);
+  const normalizedUser = normalizeSnapText(userText);
+  const normalizedAlias = normalizeSnapText(alias);
 
   if (!normalizedUser || !normalizedAlias) return 0;
 
@@ -225,8 +233,8 @@ function aliasMatchScore(userText, alias) {
   return Math.min(score, 82);
 }
 
-function findBestEmergencyMatch(inputText) {
-  const userText = normalizeText(inputText);
+function findBestEmergencyAliasMatch(inputText) {
+  const userText = normalizeSnapText(inputText);
 
   if (!userText) return null;
 
@@ -248,15 +256,7 @@ function findBestEmergencyMatch(inputText) {
 
   if (!best || best.score < 18) return null;
 
-  const matched = getProblemByTitle(best.problemTitle);
-
-  if (!matched) return null;
-
-  return {
-    ...matched,
-    score: best.score,
-    matchedAlias: best.matchedAlias,
-  };
+  return best;
 }
 
 
@@ -1026,6 +1026,38 @@ function App() {
     return null;
   }
 
+  function findBestEmergencyMatch(inputText) {
+    const bestAlias = findBestEmergencyAliasMatch(inputText);
+
+    if (!bestAlias) return null;
+
+    const matched = getProblemByTitle(bestAlias.problemTitle);
+
+    if (!matched) return null;
+
+    return {
+      ...matched,
+      score: bestAlias.score,
+      matchedAlias: bestAlias.matchedAlias,
+    };
+  }
+
+  function getConfidenceLevel(score) {
+    if (score >= 80) return "high";
+    if (score >= 50) return "medium";
+    return "low";
+  }
+
+  function buildSnapBotSuccessMessage(match) {
+    const confidence = getConfidenceLevel(match.score || 0);
+
+    return `✅ Guidance opened: ${match.problem.title}
+Confidence: ${confidence}
+Matched clue: "${match.matchedAlias || "smart detection"}"
+
+⚠️ Follow the steps shown and call emergency services if needed.`;
+  }
+
   function smartMatchGuidance(aiData) {
     const aiText = normalizeText(`
       ${aiData?.emergency || ""}
@@ -1122,7 +1154,9 @@ function App() {
           openGuidance(
             match.emergency,
             match.problem,
-            `Photo matched: ${match.problem.title}`
+            `✅ Photo matched: ${match.problem.title}
+
+⚠️ Follow the steps shown and call emergency services if needed.`
           );
           return;
         }
@@ -1149,36 +1183,49 @@ function App() {
 
     if (userText === "") {
       setBotMessage(
-        "⚠️ Please type what happened. Example: snake bite, bleeding, earthquake, flood, building collapse, fire, choking."
+        `⚠️ Please type what happened. Examples:
+• snake bite
+• heavy bleeding
+• earthquake
+• flood
+• building collapse
+• room fire
+• choking`
       );
       return;
     }
 
     setBotError("");
-    setBotMessage("🔍 Understanding the situation and finding guidance...");
+    setBotMessage("🔍 Understanding the situation and finding the safest guidance...");
 
-    const bestAliasMatch = findBestEmergencyMatch(userText);
+    const correctedText = userText
+      .replace("bleedng", "bleeding")
+      .replace("bleedingg", "bleeding")
+      .replace("snak bite", "snake bite")
+      .replace("snake bte", "snake bite")
+      .replace("fractur", "fracture")
+      .replace("earth quake", "earthquake")
+      .replace("bilding collapse", "building collapse")
+      .replace("buliding collapse", "building collapse");
 
-    if (bestAliasMatch) {
-      const confidence =
-        bestAliasMatch.score >= 80 ? "high" :
-        bestAliasMatch.score >= 40 ? "medium" : "low";
+    const bestAliasMatch = findBestEmergencyMatch(correctedText);
 
+    if (bestAliasMatch && bestAliasMatch.score >= 25) {
       openGuidance(
         bestAliasMatch.emergency,
         bestAliasMatch.problem,
-        `✅ Guidance opened: ${bestAliasMatch.problem.title}\nConfidence: ${confidence}\nMatched clue: "${bestAliasMatch.matchedAlias}"`
+        buildSnapBotSuccessMessage(bestAliasMatch)
       );
       setBotInput("");
       return;
     }
 
     const fakeAiData = {
-      emergency: userText,
-      problem: userText,
-      reason: userText,
-      description: userText,
-      keywords: userText,
+      emergency: correctedText,
+      problem: correctedText,
+      reason: correctedText,
+      description: correctedText,
+      keywords: correctedText,
     };
 
     const smartMatch = smartMatchGuidance(fakeAiData);
@@ -1187,7 +1234,9 @@ function App() {
       openGuidance(
         smartMatch.emergency,
         smartMatch.problem,
-        `✅ Closest guidance opened: ${smartMatch.problem.title}`
+        `✅ Closest guidance opened: ${smartMatch.problem.title}
+
+⚠️ If this is not correct, type simpler words like bleeding, fire, flood, earthquake, choking.`
       );
       setBotInput("");
       return;
@@ -1206,7 +1255,7 @@ function App() {
       }))
     );
 
-    const userWords = userText.split(" ").filter((word) => word.length > 2);
+    const userWords = correctedText.split(" ").filter((word) => word.length > 2);
 
     const ranked = allProblems
       .map((item) => {
@@ -1226,14 +1275,29 @@ function App() {
       openGuidance(
         top.emergency,
         top.problem,
-        `✅ I found the closest guidance: ${top.problem.title}\nOther possible matches: ${ranked.map((item) => item.problem.title).join(", ")}`
+        `✅ I found the closest guidance: ${top.problem.title}
+Other possible matches: ${ranked.map((item) => item.problem.title).join(", ")}
+
+⚠️ If this is not correct, go back and choose manually.`
       );
       setBotInput("");
       return;
     }
 
     setBotMessage(
-      "❌ I could not safely identify it.\nTry typing simpler words like:\n• earthquake\n• flood\n• building collapse\n• room fire\n• smoke inhalation\n• snake bite\n• heavy bleeding\n• fracture\n• baby choking\n• no pulse"
+      `❌ I could not safely identify it.
+
+Try simple keywords like:
+• earthquake
+• flood
+• building collapse
+• room fire
+• smoke inhalation
+• snake bite
+• heavy bleeding
+• fracture
+• baby choking
+• no pulse`
     );
   }
 

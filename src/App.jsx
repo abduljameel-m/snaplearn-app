@@ -737,6 +737,7 @@ function App() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
+  const [loadingSnapBotAI, setLoadingSnapBotAI] = useState(false);
   const [aiResult, setAiResult] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [locationError, setLocationError] = useState("");
@@ -1231,7 +1232,33 @@ Type simple words like:
   const totalSteps = EMERGENCIES.reduce((total, emergency) => {
     return total + emergency.problems.reduce((problemTotal, problem) => problemTotal + problem.steps.length, 0);
   }, 0);
-  function askSnapBot(inputValue = botInput) {
+  function formatSnapBotAIResponse(data) {
+    const actions = Array.isArray(data?.nextActions) ? data.nextActions : [];
+
+    const actionText = actions.length
+      ? actions.map((step, index) => `${index + 1}. ${step}`).join("\n")
+      : "1. Stay calm and move to a safe place if possible.\n2. Use Panic Mode if the situation is serious.\n3. Call emergency services if needed.";
+
+    const emergencyName = data?.emergency || "Emergency Guidance";
+    const confidence = data?.confidence || "medium";
+    const severity = data?.severity || "serious";
+    const answer = data?.answer || "I understood the situation and generated emergency guidance.";
+
+    return `🧠 AI SnapBot Response
+
+🚨 Emergency: ${emergencyName}
+Confidence: ${confidence}
+Severity: ${severity}
+
+${answer}
+
+👉 What to do now:
+${actionText}
+
+${data?.callNow ? `📞 Recommended: Call ${data?.recommendedNumber || "112"} now.` : "✅ Continue following the steps and monitor the situation."}`;
+  }
+
+  function runLocalSnapBotFallback(inputValue = botInput) {
     const userText = normalizeText(inputValue);
 
     if (userText === "") {
@@ -1249,7 +1276,6 @@ Type simple words like:
     }
 
     setBotError("");
-    setBotMessage("🔍 Understanding the situation and finding the safest guidance...");
 
     const correctedText = userText
       .replace("bleedng", "bleeding")
@@ -1273,15 +1299,13 @@ Type simple words like:
       return;
     }
 
-    const fakeAiData = {
+    const smartMatch = smartMatchGuidance({
       emergency: correctedText,
       problem: correctedText,
       reason: correctedText,
       description: correctedText,
       keywords: correctedText,
-    };
-
-    const smartMatch = smartMatchGuidance(fakeAiData);
+    });
 
     if (smartMatch) {
       openGuidance(
@@ -1295,50 +1319,8 @@ Type simple words like:
       return;
     }
 
-    const allProblems = EMERGENCIES.flatMap((emergency) =>
-      emergency.problems.map((problem) => ({
-        emergency,
-        problem,
-        text: normalizeText(`
-          ${emergency.name}
-          ${problem.title}
-          ${problem.keywords}
-          ${problem.steps.map((step) => step.text).join(" ")}
-        `),
-      }))
-    );
-
-    const userWords = correctedText.split(" ").filter((word) => word.length > 2);
-
-    const ranked = allProblems
-      .map((item) => {
-        const score = userWords.reduce((total, word) => {
-          if (item.text.includes(word)) return total + 1;
-          return total;
-        }, 0);
-
-        return { ...item, score };
-      })
-      .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
-
-    if (ranked.length > 0) {
-      const top = ranked[0];
-      openGuidance(
-        top.emergency,
-        top.problem,
-        `✅ I found the closest guidance: ${top.problem.title}
-Other possible matches: ${ranked.map((item) => item.problem.title).join(", ")}
-
-⚠️ If this is not correct, go back and choose manually.`
-      );
-      setBotInput("");
-      return;
-    }
-
     setBotMessage(
-      `❌ I could not safely identify it.
+      `❌ I could not safely identify it offline.
 
 Try simple keywords like:
 • earthquake
@@ -1352,6 +1334,73 @@ Try simple keywords like:
 • baby choking
 • no pulse`
     );
+  }
+
+  async function askSnapBot(inputValue = botInput) {
+    const userText = String(inputValue || "").trim();
+
+    if (!userText) {
+      setBotMessage(`⚠️ Please describe the situation.
+
+Examples:
+• my friend fell and blood is coming
+• bike accident head injury
+• fire in kitchen
+• baby is choking
+• building collapsed near me`);
+      return;
+    }
+
+    setBotError("");
+    setAiResult(null);
+
+    if (!navigator.onLine) {
+      setBotMessage("📴 Offline mode active. Using local emergency guidance...");
+      runLocalSnapBotFallback(userText);
+      return;
+    }
+
+    try {
+      setLoadingSnapBotAI(true);
+      setBotMessage("🧠 SnapBot AI is understanding the situation...");
+
+      const response = await fetch("/api/snapbot-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userText,
+          emergencyProfile,
+          locationText,
+          isOffline: !navigator.onLine,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("SNAPBOT AI RESPONSE:", data);
+
+      setLoadingSnapBotAI(false);
+      setAiResult({
+        problem: data?.emergency || "AI Guidance",
+        confidence: data?.confidence || "medium",
+        reason: data?.answer || "",
+      });
+
+      if (!response.ok || data?.error) {
+        setBotError(data?.error || "AI response failed. Using local fallback.");
+        runLocalSnapBotFallback(userText);
+        return;
+      }
+
+      setBotMessage(formatSnapBotAIResponse(data));
+      setBotInput("");
+    } catch (error) {
+      console.error("SnapBot AI failed:", error);
+      setLoadingSnapBotAI(false);
+      setBotError("AI failed due to network/API issue. Using local fallback.");
+      runLocalSnapBotFallback(userText);
+    }
   }
 
   function safeAskSnapBot(inputValue = botInput) {
@@ -1383,6 +1432,7 @@ Try simple keywords like:
     setImagePreview("");
     setAiResult(null);
     setLoadingAI(false);
+    setLoadingSnapBotAI(false);
   }
 
   function openSnapBotAssistant() {
@@ -1495,14 +1545,14 @@ Try simple keywords like:
           <div className="snapBotInputWrap">
             <input
               type="text"
-              placeholder="Example: earthquake, bleeding, snake bite, baby choking"
+              placeholder="Describe naturally: my friend fell and blood is coming"
               value={botInput}
               onChange={(e) => setBotInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") safeAskSnapBot();
               }}
             />
-            <button className="miniSendBtn" onClick={() => safeAskSnapBot()}>
+            <button className="miniSendBtn" onClick={() => safeAskSnapBot()} disabled={loadingSnapBotAI}>
               Find
             </button>
           </div>
@@ -1534,7 +1584,7 @@ Try simple keywords like:
               />
             </label>
 
-            <button className="snapBotFlowCard guidanceFlowCard" onClick={() => safeAskSnapBot()}>
+            <button className="snapBotFlowCard guidanceFlowCard" onClick={() => safeAskSnapBot()} disabled={loadingSnapBotAI}>
               <span>🧭</span>
               <strong>Find Guidance</strong>
               <small>Open the closest emergency steps</small>
@@ -1559,7 +1609,7 @@ Try simple keywords like:
           )}
 
           <div className="snapBotActions">
-            <button className="snapBotAsk" onClick={() => safeAskSnapBot()}>
+            <button className="snapBotAsk" onClick={() => safeAskSnapBot()} disabled={loadingSnapBotAI}>
               Find Guidance
             </button>
             <button
@@ -1570,6 +1620,12 @@ Try simple keywords like:
               {loadingAI ? "Analyzing..." : isOnline ? "Analyze Photo with AI" : "AI needs internet"}
             </button>
           </div>
+
+          {loadingSnapBotAI && (
+            <div className="botLoader">
+              <span></span> SnapBot AI is thinking...
+            </div>
+          )}
 
           {loadingAI && (
             <div className="botLoader">

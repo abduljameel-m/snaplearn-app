@@ -1,0 +1,159 @@
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Only POST allowed" });
+  }
+
+  try {
+    const { userText, emergencyProfile, locationText, isOffline } = req.body;
+
+    if (!userText || !userText.trim()) {
+      return res.status(400).json({
+        error: "Message missing",
+        answer: "Please describe what happened. Example: my friend fell and blood is coming.",
+      });
+    }
+
+    if (isOffline) {
+      return res.status(200).json({
+        mode: "offline",
+        emergency: "Unknown",
+        confidence: "low",
+        answer:
+          "You appear to be offline. I can still help with basic emergency guidance inside the app. Please use simple words like bleeding, fire, choking, snake bite, fracture, flood, or earthquake.",
+        nextActions: [
+          "Stay calm and move to a safe place if possible.",
+          "Use Panic Mode to call 108, 101, or 112.",
+          "Search the emergency category manually if AI is unavailable.",
+        ],
+      });
+    }
+
+    const apiKey = process.env.OPENROUTER_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({
+        error: "OpenRouter API key missing",
+        answer: "AI is not configured. Please use the emergency categories or Panic Mode.",
+      });
+    }
+
+    const systemPrompt = `
+You are SnapBot, an emergency guidance assistant for an app called SnapLearn.
+
+Your job:
+1. Understand the user's emergency situation from natural language.
+2. Identify the likely emergency.
+3. Give immediate step-by-step guidance.
+4. Keep the response short, calm, and action-focused.
+5. Always recommend calling local emergency services when serious.
+6. For India, use these emergency numbers:
+   - Ambulance: 108
+   - Fire: 101
+   - SOS: 112
+
+Important safety rules:
+- Do not give complicated medical explanations.
+- Do not suggest dangerous actions.
+- Do not replace professional emergency services.
+- If unclear, ask for one short clarification but still give safe general steps.
+- If the situation is life-threatening, prioritize calling emergency services.
+
+Return JSON ONLY in this exact format:
+{
+  "emergency": "short emergency name",
+  "confidence": "high | medium | low",
+  "severity": "critical | serious | moderate | low",
+  "answer": "short helpful paragraph",
+  "nextActions": ["step 1", "step 2", "step 3", "step 4"],
+  "callNow": true,
+  "recommendedNumber": "108 | 101 | 112 | none"
+}
+`;
+
+    const userContext = `
+User emergency message:
+"${userText}"
+
+Emergency profile, if available:
+${JSON.stringify(emergencyProfile || {}, null, 2)}
+
+Location text, if available:
+${locationText || "Not available"}
+`;
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://snaplearn-app.vercel.app",
+        "X-Title": "SnapLearn Emergency Assistant",
+      },
+      body: JSON.stringify({
+        model: "openrouter/auto",
+        temperature: 0.2,
+        max_tokens: 700,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: userContext,
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.log("OPENROUTER SNAPBOT ERROR:", data);
+      return res.status(500).json({
+        error: "OpenRouter API error",
+        details: data,
+        answer: "AI failed. Please use Panic Mode or choose an emergency category manually.",
+      });
+    }
+
+    const text = data?.choices?.[0]?.message?.content || "";
+
+    let result;
+
+    try {
+      const cleaned = text
+        .replace(/^```json/i, "")
+        .replace(/^```/i, "")
+        .replace(/```$/i, "")
+        .trim();
+
+      result = JSON.parse(cleaned);
+    } catch {
+      result = {
+        emergency: "Unclear emergency",
+        confidence: "low",
+        severity: "serious",
+        answer:
+          "I could not fully understand the situation, but if someone is in danger, move to safety and call emergency services immediately.",
+        nextActions: [
+          "Stay calm and check if the person is breathing.",
+          "Move away from danger if it is safe.",
+          "Call 108 for ambulance or 112 for emergency help.",
+          "Use the app emergency categories for specific steps.",
+        ],
+        callNow: true,
+        recommendedNumber: "112",
+      };
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.log("SNAPBOT API FAILED:", error);
+    return res.status(500).json({
+      error: "SnapBot AI failed",
+      details: error.message,
+      answer: "AI failed. Please use Panic Mode or choose an emergency category manually.",
+    });
+  }
+}

@@ -739,6 +739,7 @@ function App() {
   const [loadingAI, setLoadingAI] = useState(false);
   const [loadingSnapBotAI, setLoadingSnapBotAI] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+  const [aiSuggestedGuidance, setAiSuggestedGuidance] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [manualLocation, setManualLocation] = useState(() => localStorage.getItem("snaplearnManualLocation") || "");
@@ -1012,14 +1013,14 @@ function App() {
   });
 
   useEffect(() => {
-    if (!searchKeyword) return;
+    if (!searchKeyword || searchKeyword.length < 2) return;
 
     const timer = setTimeout(() => {
       searchResultsRef.current?.scrollIntoView({
         behavior: "smooth",
-        block: "start",
+        block: "center",
       });
-    }, 120);
+    }, 180);
 
     return () => clearTimeout(timer);
   }, [searchKeyword]);
@@ -1232,6 +1233,66 @@ Type simple words like:
   const totalSteps = EMERGENCIES.reduce((total, emergency) => {
     return total + emergency.problems.reduce((problemTotal, problem) => problemTotal + problem.steps.length, 0);
   }, 0);
+  function findEmergencyTopicByName(topicName) {
+    const normalizedTopic = normalizeText(topicName);
+
+    if (!normalizedTopic || normalizedTopic === "none") return null;
+
+    return EMERGENCIES.find((emergency) =>
+      normalizeText(emergency.name) === normalizedTopic ||
+      normalizeText(emergency.name).includes(normalizedTopic) ||
+      normalizedTopic.includes(normalizeText(emergency.name))
+    ) || null;
+  }
+
+  function getProblemByTopicAndProblem(topicName, problemName) {
+    const topic = findEmergencyTopicByName(topicName);
+    const normalizedProblem = normalizeText(problemName);
+
+    if (topic && normalizedProblem && normalizedProblem !== "none") {
+      const problem = topic.problems.find((item) =>
+        normalizeText(item.title) === normalizedProblem ||
+        normalizeText(item.title).includes(normalizedProblem) ||
+        normalizedProblem.includes(normalizeText(item.title))
+      );
+
+      if (problem) return { emergency: topic, problem };
+    }
+
+    return getProblemByTitle(problemName);
+  }
+
+  function createAISuggestedGuidance(data) {
+    const matched =
+      getProblemByTopicAndProblem(data?.suggestedTopic, data?.suggestedProblem) ||
+      smartMatchGuidance({
+        emergency: data?.emergency,
+        problem: data?.suggestedProblem || data?.emergency,
+        reason: data?.answer,
+        description: safeArray(data?.nextActions).join(" "),
+        keywords: `${data?.suggestedTopic || ""} ${data?.suggestedProblem || ""}`,
+      });
+
+    if (!matched) return null;
+
+    return {
+      emergency: matched.emergency,
+      problem: matched.problem,
+      topicName: matched.emergency.name,
+      problemName: matched.problem.title,
+    };
+  }
+
+  function openAISuggestedGuidance() {
+    if (!aiSuggestedGuidance) return;
+
+    openGuidance(
+      aiSuggestedGuidance.emergency,
+      aiSuggestedGuidance.problem,
+      `✅ Opened suggested topic: ${aiSuggestedGuidance.topicName} → ${aiSuggestedGuidance.problemName}`
+    );
+  }
+
   function formatSnapBotAIResponse(data) {
     const actions = Array.isArray(data?.nextActions) ? data.nextActions : [];
 
@@ -1243,12 +1304,15 @@ Type simple words like:
     const confidence = data?.confidence || "medium";
     const severity = data?.severity || "serious";
     const answer = data?.answer || "I understood the situation and generated emergency guidance.";
+    const topic = data?.suggestedTopic && data.suggestedTopic !== "none" ? data.suggestedTopic : "";
+    const problem = data?.suggestedProblem && data.suggestedProblem !== "none" ? data.suggestedProblem : "";
 
     return `🧠 AI SnapBot Response
 
 🚨 Emergency: ${emergencyName}
 Confidence: ${confidence}
 Severity: ${severity}
+${topic ? `Suggested app topic: ${topic}${problem ? ` → ${problem}` : ""}` : ""}
 
 ${answer}
 
@@ -1356,6 +1420,7 @@ Examples:
 
     if (!navigator.onLine) {
       setBotMessage("📴 Offline mode active. Using local emergency guidance...");
+      setAiSuggestedGuidance(null);
       runLocalSnapBotFallback(userText);
       return;
     }
@@ -1387,8 +1452,11 @@ Examples:
         reason: data?.answer || "",
       });
 
+      setAiSuggestedGuidance(createAISuggestedGuidance(data));
+
       if (!response.ok || data?.error) {
         setBotError(data?.error || "AI response failed. Using local fallback.");
+        setAiSuggestedGuidance(null);
         runLocalSnapBotFallback(userText);
         return;
       }
@@ -1399,6 +1467,7 @@ Examples:
       console.error("SnapBot AI failed:", error);
       setLoadingSnapBotAI(false);
       setBotError("AI failed due to network/API issue. Using local fallback.");
+      setAiSuggestedGuidance(null);
       runLocalSnapBotFallback(userText);
     }
   }
@@ -1431,6 +1500,7 @@ Examples:
     setImageFile(null);
     setImagePreview("");
     setAiResult(null);
+    setAiSuggestedGuidance(null);
     setLoadingAI(false);
     setLoadingSnapBotAI(false);
   }
@@ -1637,6 +1707,17 @@ Examples:
             <div className="aiResultCard">
               <strong>AI Result:</strong> {aiResult.problem || "Unclear"} ({aiResult.confidence || "low"})
               {aiResult.reason && <p>{aiResult.reason}</p>}
+            </div>
+          )}
+
+          {aiSuggestedGuidance && (
+            <div className="aiTopicCard">
+              <span className="topicBadge">Suggested App Guidance</span>
+              <h4>{aiSuggestedGuidance.topicName}</h4>
+              <p>{aiSuggestedGuidance.problemName}</p>
+              <button type="button" onClick={openAISuggestedGuidance}>
+                Open this guidance →
+              </button>
             </div>
           )}
 

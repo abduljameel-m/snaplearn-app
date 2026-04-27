@@ -20,6 +20,8 @@ export default async function handler(req, res) {
         confidence: "low",
         answer:
           "You appear to be offline. I can still help with basic emergency guidance inside the app. Please use simple words like bleeding, fire, choking, snake bite, fracture, flood, or earthquake.",
+        suggestedTopic: "none",
+        suggestedProblem: "none",
         nextActions: [
           "Stay calm and move to a safe place if possible.",
           "Use Panic Mode to call 108, 101, or 112.",
@@ -63,11 +65,21 @@ Return JSON ONLY in this exact format:
   "emergency": "short emergency name",
   "confidence": "high | medium | low",
   "severity": "critical | serious | moderate | low",
+  "suggestedTopic": "CPR Emergency | Fire Emergency | Road Accident | Choking | Disaster / Catastrophic Failure | Animal & Insect Injuries | none",
+  "suggestedProblem": "Person Not Breathing | No Pulse | Room Fire | Clothes on Fire | Smoke Inhalation | Head Injury | Hand / Leg Fracture | Heavy Bleeding | Adult Choking | Baby Choking | Earthquake | Flood | Building Collapse | Snake Bite | Dog Bite | Bee / Wasp Sting | none",
   "answer": "short helpful paragraph",
   "nextActions": ["step 1", "step 2", "step 3", "step 4"],
   "callNow": true,
   "recommendedNumber": "108 | 101 | 112 | none"
 }
+
+Important mapping examples:
+- not breathing, unconscious, CPR, no pulse -> CPR Emergency
+- fire, smoke, burning, gas suffocation -> Fire Emergency
+- accident, bleeding, fracture, head injury -> Road Accident
+- choking, food stuck, throat blocked -> Choking
+- earthquake, flood, building collapse, trapped in debris -> Disaster / Catastrophic Failure
+- snake bite, dog bite, bee sting -> Animal & Insect Injuries
 `;
 
     const userContext = `
@@ -134,6 +146,8 @@ ${locationText || "Not available"}
         emergency: "Unclear emergency",
         confidence: "low",
         severity: "serious",
+        suggestedTopic: "none",
+        suggestedProblem: "none",
         answer:
           "I could not fully understand the situation, but if someone is in danger, move to safety and call emergency services immediately.",
         nextActions: [
@@ -146,6 +160,74 @@ ${locationText || "Not available"}
         recommendedNumber: "112",
       };
     }
+
+
+    const TOPIC_PROBLEM_MAP = {
+      "Person Not Breathing": "CPR Emergency",
+      "No Pulse": "CPR Emergency",
+      "Room Fire": "Fire Emergency",
+      "Clothes on Fire": "Fire Emergency",
+      "Smoke Inhalation": "Fire Emergency",
+      "Head Injury": "Road Accident",
+      "Hand / Leg Fracture": "Road Accident",
+      "Heavy Bleeding": "Road Accident",
+      "Adult Choking": "Choking",
+      "Baby Choking": "Choking",
+      "Earthquake": "Disaster / Catastrophic Failure",
+      "Flood": "Disaster / Catastrophic Failure",
+      "Building Collapse": "Disaster / Catastrophic Failure",
+      "Snake Bite": "Animal & Insect Injuries",
+      "Dog Bite": "Animal & Insect Injuries",
+      "Bee / Wasp Sting": "Animal & Insect Injuries",
+    };
+
+    const PROBLEM_ALIASES = [
+      ["Person Not Breathing", ["not breathing", "no breathing", "unconscious", "breath stopped", "cpr"]],
+      ["No Pulse", ["no pulse", "no heartbeat", "heart stopped", "cardiac arrest"]],
+      ["Room Fire", ["room fire", "house fire", "kitchen fire", "building fire", "fire"]],
+      ["Clothes on Fire", ["clothes on fire", "person burning", "dress fire", "shirt fire"]],
+      ["Smoke Inhalation", ["smoke", "smoke inhalation", "gas", "suffocation"]],
+      ["Head Injury", ["head injury", "head hit", "head bleeding", "head trauma"]],
+      ["Hand / Leg Fracture", ["fracture", "broken bone", "broken hand", "broken leg"]],
+      ["Heavy Bleeding", ["bleeding", "blood", "wound", "deep cut"]],
+      ["Adult Choking", ["adult choking", "choking", "food stuck", "throat blocked"]],
+      ["Baby Choking", ["baby choking", "infant choking", "child choking"]],
+      ["Earthquake", ["earthquake", "ground shaking", "tremor"]],
+      ["Flood", ["flood", "flood water", "water logging", "trapped in water"]],
+      ["Building Collapse", ["building collapse", "collapsed building", "debris", "rubble", "trapped"]],
+      ["Snake Bite", ["snake bite", "snake", "cobra", "viper", "venom"]],
+      ["Dog Bite", ["dog bite", "dog", "rabies"]],
+      ["Bee / Wasp Sting", ["bee sting", "wasp sting", "insect sting"]],
+    ];
+
+    function normalizeText(value) {
+      return String(value || "").toLowerCase().replace(/[^a-z0-9\s/]/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function repairSuggestedTopic(result, originalInput) {
+      const combined = normalizeText(`${result?.emergency || ""} ${result?.suggestedProblem || ""} ${result?.answer || ""} ${originalInput || ""}`);
+
+      let problem = result?.suggestedProblem;
+      if (!problem || problem === "none" || !TOPIC_PROBLEM_MAP[problem]) {
+        for (const [problemName, aliases] of PROBLEM_ALIASES) {
+          if (aliases.some((alias) => combined.includes(alias))) {
+            problem = problemName;
+            break;
+          }
+        }
+      }
+
+      const topic = TOPIC_PROBLEM_MAP[problem] || result?.suggestedTopic || "none";
+
+      return {
+        ...result,
+        suggestedProblem: problem || "none",
+        suggestedTopic: topic || "none",
+      };
+    }
+
+    result = repairSuggestedTopic(result, userText);
+
 
     return res.status(200).json(result);
   } catch (error) {

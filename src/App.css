@@ -4062,3 +4062,131 @@ textarea:focus {
     width: auto;
   }
 }
+/* ============================
+   SNAPLEARN ELITE UI (REFERENCE MATCH)
+============================ */
+
+/* 🌌 GLOBAL DARK SYSTEM */
+body {
+  background: radial-gradient(circle at 20% 30%, #1e3a8a33, transparent 40%),
+              radial-gradient(circle at 80% 70%, #06b6d433, transparent 40%),
+              #020617;
+  color: #e2e8f0;
+}
+
+/* 🧊 GLASS CARD SYSTEM */
+.card,
+.statItem,
+.details,
+.visualStep,
+.snapBotBox {
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+/* ⚡ HERO PREMIUM */
+.hero {
+  background: linear-gradient(135deg, #020617, #1e293b, #0f172a);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+}
+
+.hero h1 {
+  font-size: 60px;
+  letter-spacing: -1px;
+  font-weight: 900;
+}
+
+/* ✨ BUTTON GLOW */
+button {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  box-shadow: 0 10px 30px rgba(59,130,246,0.4);
+}
+
+button:hover {
+  transform: translateY(-3px) scale(1.02);
+}
+
+/* 💎 CARD HOVER EFFECT */
+.card:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+}
+
+/* 🤖 SNAPBOT PANEL (LIKE IMAGE) */
+.snapBotBox {
+  width: 380px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, #020617, #0f172a);
+  box-shadow: 0 40px 120px rgba(0,0,0,0.8);
+  animation: botAppear 0.3s ease;
+}
+
+@keyframes botAppear {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 🤖 BOT IMAGE STYLE */
+.snapBotHeader h3 {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+/* 💬 CHAT CHIP STYLE */
+.suggestionChips button {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e2e8f0;
+}
+
+.suggestionChips button:hover {
+  background: #3b82f6;
+}
+
+/* 🚨 PANIC MODE (LIKE ALERT CARD) */
+.showPanic {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(600px, 90%);
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  box-shadow: 0 30px 80px rgba(220,38,38,0.6);
+  border-radius: 20px;
+  z-index: 9999;
+  animation: panicDrop 0.3s ease;
+}
+
+@keyframes panicDrop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+}
+
+/* 🌟 FLOATING BUTTON */
+.snapBotButton {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  box-shadow: 0 20px 60px rgba(124,58,237,0.5);
+}
+
+/* 📱 MOBILE POLISH */
+@media (max-width: 768px) {
+  .snapBotBox {
+    width: auto;
+    left: 10px;
+    right: 10px;
+  }
+
+  .hero h1 {
+    font-size: 36px;
+  }
+}
